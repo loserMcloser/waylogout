@@ -1,0 +1,122 @@
+# swaylogout(1) completion
+
+_swaylogout()
+{
+  local cur prev
+  _get_comp_words_by_ref -n : cur prev
+
+  short=(
+    -C
+    -c
+    -d
+    -e
+    -f
+    -F
+    -h
+    -i
+    -k
+    -K
+    -L
+    -l
+    -n
+    -r
+    -s
+    -t
+    -u
+    -v
+  )
+
+  long=(
+    --bs-hl-color
+    --caps-lock-bs-hl-color
+    --caps-lock-key-hl-color
+    --color
+    --config
+    --daemonize
+    --debug
+    --disable-caps-lock-text
+    --font
+    --font-size
+    --help
+    --hide-keyboard-layout
+    --ignore-empty-password
+    --image
+    --indicator-caps-lock
+    --indicator-idle-visible
+    --indicator-radius
+    --indicator-thickness
+    --indicator-x-position
+    --indicator-y-position
+    --inside-caps-lock-color
+    --inside-clear-color
+    --inside-color
+    --inside-ver-color
+    --inside-wrong-color
+    --key-hl-color
+    --layout-bg-color
+    --layout-border-color
+    --layout-text-color
+    --line-caps-lock-color
+    --line-clear-color
+    --line-color
+    --line-uses-inside
+    --line-uses-ring
+    --line-ver-color
+    --line-wrong-color
+    --no-unlock-indicator
+    --ring-caps-lock-color
+    --ring-clear-color
+    --ring-color
+    --ring-ver-color
+    --ring-wrong-color
+    --scaling
+    --separator-color
+    --show-failed-attempts
+    --show-keyboard-layout
+    --text-caps-lock-color
+    --text-clear-color
+    --text-color
+    --text-ver-color
+    --text-wrong-color
+    --tiling
+    --version
+  )
+
+  scaling=(
+    'stretch'
+    'fill'
+    'fit'
+    'center'
+    'tile'
+    'solid_color'
+  )
+
+  case $prev in
+    -c|--color)
+      return
+      ;;
+    --scaling)
+      COMPREPLY=($(compgen -W "${scaling[*]}" -- "$cur"))
+      return
+      ;;
+    -i|--image)
+      if grep -q : <<< "$cur"; then
+        output="${cur%%:*}:"
+        cur="${cur#*:}"
+      else
+        output=
+      fi
+      COMPREPLY=($(compgen -f -- "$cur"))
+      return
+      ;;
+  esac
+
+  if [[ $cur == --* ]]; then
+    COMPREPLY=($(compgen -W "${long[*]}" -- "$cur"))
+  else
+    COMPREPLY=($(compgen -W "${short[*]}" -- "$cur"))
+    COMPREPLY+=($(compgen -W "${long[*]}" -- "$cur"))
+  fi
+
+} &&
+complete -F _swaylogout swaylock

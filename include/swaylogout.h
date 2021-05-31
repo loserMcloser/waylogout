@@ -1,0 +1,176 @@
+#ifndef _SWAYLOGOUT_H
+#define _SWAYLOGOUT_H
+#include <stdbool.h>
+#include <stdint.h>
+#include <wayland-client.h>
+#include "background-image.h"
+#include "cairo.h"
+#include "pool-buffer.h"
+#include "seat.h"
+#include "effects.h"
+#include "fade.h"
+#include "wlr-layer-shell-unstable-v1-client-protocol.h"
+
+enum auth_state {
+	AUTH_STATE_IDLE,
+	AUTH_STATE_CLEAR,
+	AUTH_STATE_INPUT,
+	AUTH_STATE_INPUT_NOP,
+	AUTH_STATE_BACKSPACE,
+	AUTH_STATE_VALIDATING,
+	AUTH_STATE_INVALID,
+	AUTH_STATE_GRACE,
+};
+
+struct swaylogout_colorset {
+	uint32_t input;
+	uint32_t cleared;
+	uint32_t caps_lock;
+	uint32_t verifying;
+	uint32_t wrong;
+};
+
+struct swaylogout_colors {
+	uint32_t background;
+	uint32_t bs_highlight;
+	uint32_t key_highlight;
+	uint32_t caps_lock_bs_highlight;
+	uint32_t caps_lock_key_highlight;
+	uint32_t separator;
+	uint32_t layout_background;
+	uint32_t layout_border;
+	uint32_t layout_text;
+	struct swaylogout_colorset inside;
+	struct swaylogout_colorset line;
+	struct swaylogout_colorset ring;
+	struct swaylogout_colorset text;
+};
+
+struct swaylogout_args {
+	struct swaylogout_colors colors;
+	enum background_mode mode;
+	char *font;
+	uint32_t font_size;
+	uint32_t radius;
+	uint32_t thickness;
+	uint32_t indicator_x_position;
+	uint32_t indicator_y_position;
+	bool override_indicator_x_position;
+	bool override_indicator_y_position;
+	bool ignore_empty;
+	bool show_indicator;
+	bool show_caps_lock_text;
+	bool show_caps_lock_indicator;
+	bool show_keyboard_layout;
+	bool hide_keyboard_layout;
+	bool show_failed_attempts;
+	bool daemonize;
+	bool indicator_idle_visible;
+
+	bool screenshots;
+	struct swaylogout_effect *effects;
+	int effects_count;
+	bool time_effects;
+	bool indicator;
+	bool clock;
+	char *timestr;
+	char *datestr;
+	bool lock_symbol;
+	bool user;
+	uint32_t fade_in;
+	bool password_submit_on_touch;
+	uint32_t password_grace_period;
+	bool password_grace_no_mouse;
+	bool password_grace_no_touch;
+};
+
+struct swaylogout_password {
+	size_t len;
+	char buffer[1024];
+};
+
+struct swaylogout_state {
+	struct loop *eventloop;
+	struct loop_timer *clear_indicator_timer; // clears the indicator
+	struct loop_timer *clear_password_timer;  // clears the password buffer
+	struct wl_display *display;
+	struct wl_compositor *compositor;
+	struct wl_subcompositor *subcompositor;
+	struct zwlr_layer_shell_v1 *layer_shell;
+	struct zwlr_input_inhibit_manager_v1 *input_inhibit_manager;
+	struct zwlr_screencopy_manager_v1 *screencopy_manager;
+	struct wl_shm *shm;
+	struct wl_list surfaces;
+	struct wl_list images;
+	struct swaylogout_args args;
+	struct swaylogout_password password;
+	struct swaylogout_xkb xkb;
+	enum auth_state auth_state;
+	char *username;
+	bool indicator_dirty;
+	int render_randnum;
+	int failed_attempts;
+	size_t n_screenshots_done;
+	bool run_display;
+	struct zxdg_output_manager_v1 *zxdg_output_manager;
+};
+
+struct swaylogout_surface {
+	cairo_surface_t *image;
+	struct {
+		uint32_t format, width, height, stride;
+		enum wl_output_transform transform;
+		void *data;
+		struct swaylogout_image *image;
+	} screencopy;
+	struct swaylogout_state *state;
+	struct wl_output *output;
+	uint32_t output_global_name;
+	struct zxdg_output_v1 *xdg_output;
+	struct wl_surface *surface;
+	struct wl_surface *child; // surface made into subsurface
+	struct wl_subsurface *subsurface;
+	struct zwlr_layer_surface_v1 *layer_surface;
+	struct zwlr_screencopy_frame_v1 *screencopy_frame;
+	struct pool_buffer buffers[2];
+	struct pool_buffer indicator_buffers[2];
+	struct pool_buffer *current_buffer;
+	struct swaylogout_fade fade;
+	int events_pending;
+	bool frame_pending, dirty;
+	uint32_t width, height;
+	uint32_t indicator_width, indicator_height;
+	int32_t scale;
+	enum wl_output_subpixel subpixel;
+	enum wl_output_transform transform;
+	char *output_name;
+	struct wl_list link;
+};
+
+// There is exactly one swaylogout_image for each -i argument
+struct swaylogout_image {
+	char *path;
+	char *output_name;
+	cairo_surface_t *cairo_surface;
+	struct wl_list link;
+};
+
+void swaylogout_handle_key(struct swaylock_state *state,
+		xkb_keysym_t keysym, uint32_t codepoint);
+void swaylogout_handle_mouse(struct swaylock_state *state);
+void swaylogout_handle_touch(struct swaylock_state *state);
+void render_frame_background(struct swaylogout_surface *surface);
+void render_background_fade(struct swaylogout_surface *surface, uint32_t time);
+void render_background_fade_prepare(struct swaylogout_surface *surface, struct pool_buffer *buffer);
+void render_frame(struct swaylogout_surface *surface);
+void render_frames(struct swaylogout_state *state);
+void damage_surface(struct swaylogout_surface *surface);
+void damage_state(struct swaylogout_state *state);
+void clear_password_buffer(struct swaylogout_password *pw);
+void schedule_indicator_clear(struct swaylogout_state *state);
+
+void initialize_pw_backend(int argc, char **argv);
+void run_pw_backend_child(void);
+void clear_buffer(char *buf, size_t size);
+
+#endif
