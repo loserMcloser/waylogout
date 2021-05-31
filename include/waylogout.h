@@ -56,6 +56,8 @@ struct waylogout_args {
 	uint32_t fade_in;
 };
 
+struct waylogout_surface;
+
 struct waylogout_action {
 	char *label;
 	char symbol[8];
@@ -63,9 +65,9 @@ struct waylogout_action {
 	xkb_keysym_t shortcut;
 	struct wl_surface *child_surface; // surface made into subsurface
 	struct wl_subsurface *subsurface;
+	struct waylogout_surface *parent_surface;
 	struct pool_buffer indicator_buffers[2];
 	uint32_t indicator_width, indicator_height;
-	uint32_t indicator_xcenter, indicator_ycenter;
 	struct wl_list link;
 };
 
@@ -85,6 +87,7 @@ struct waylogout_state {
 	struct waylogout_args args;
 	struct wl_list actions;
 	struct waylogout_action *selected_action;
+	struct waylogout_action *hovered_action;
 	struct waylogout_xkb xkb;
 	int render_randnum;
 	size_t n_screenshots_done;
@@ -143,8 +146,16 @@ struct waylogout_frame_common {
 
 void waylogout_handle_key(struct waylogout_state *state,
 		xkb_keysym_t keysym, uint32_t codepoint);
+/////// TODO get rid of these
 void waylogout_handle_mouse(struct waylogout_state *state);
 void waylogout_handle_touch(struct waylogout_state *state);
+/////////////////////////////
+void waylogout_handle_mouse_enter(struct waylogout_state *state,
+		struct wl_surface *surface, wl_fixed_t x, wl_fixed_t y);
+void waylogout_handle_mouse_leave(struct waylogout_state *state,
+		struct wl_surface *surface);
+void waylogout_handle_mouse_motion(struct waylogout_state *state,
+		wl_fixed_t x, wl_fixed_t y);
 void render_frame_background(struct waylogout_surface *surface);
 void render_background_fade(struct waylogout_surface *surface, uint32_t time);
 void render_background_fade_prepare(struct waylogout_surface *surface, struct pool_buffer *buffer);

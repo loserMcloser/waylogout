@@ -153,7 +153,7 @@ sources = [
 	'log.c',
 	'loop.c',
 	'main.c',
-	'keys.c',
+	'input.c',
 	'pool-buffer.c',
 	'render.c',
 	'seat.c',

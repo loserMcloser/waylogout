@@ -264,6 +264,7 @@ static void create_layer_surface(struct waylogout_surface *surface) {
 		action_iter->subsurface = wl_subcompositor_get_subsurface(
 				state->subcompositor, action_iter->child_surface,
 				surface->surface);
+		action_iter->parent_surface = surface;
 		assert(action_iter->subsurface);
 		wl_subsurface_set_sync(action_iter->subsurface);
 	}
@@ -1637,6 +1638,7 @@ int main(int argc, char **argv) {
 	set_default_colors(&state.args.colors);
 
 	state.selected_action = NULL;
+	state.hovered_action = NULL;
 	wl_list_init(&state.actions);
 
 	char *config_path = NULL;

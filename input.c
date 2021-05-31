@@ -12,7 +12,58 @@
 #include "unicode.h"
 #include "log.h"
 
-// TODO handle mouse clicks
+void mouse_enter_motion_selection(struct waylogout_state *state,
+		struct waylogout_action *action, int x, int y) {
+	int x_diff = (x - action->indicator_width / 2);
+	int y_diff = (y - action->indicator_width / 2);
+	int radius = (state->args.radius + state->args.thickness / 2) * action->parent_surface->scale;
+	if (x_diff * x_diff + y_diff * y_diff < radius * radius) {
+		state->selected_action = action;
+		damage_state(state);
+	} else {
+		if (state->selected_action == action) {
+			state->selected_action = NULL;
+			damage_state(state);
+		}
+	}
+}
+
+void waylogout_handle_mouse_enter(struct waylogout_state *state,
+		struct wl_surface *surface, wl_fixed_t x, wl_fixed_t y) {
+	struct waylogout_action *action_iter;
+	wl_list_for_each(action_iter, &state->actions, link)
+		if (surface == action_iter->child_surface) {
+			state->hovered_action = action_iter;
+			mouse_enter_motion_selection(state, action_iter,
+					wl_fixed_to_int(x), wl_fixed_to_int(y));
+			break;
+		}
+}
+
+void waylogout_handle_mouse_leave(struct waylogout_state *state,
+		struct wl_surface *surface) {
+	struct waylogout_action *action_iter;
+	wl_list_for_each(action_iter, &state->actions, link)
+		if (surface == action_iter->child_surface) {
+			if (action_iter == state->hovered_action)
+				state->hovered_action = NULL;
+			if (action_iter == state->selected_action)
+				state->selected_action = NULL;
+			break;
+		}
+}
+
+void waylogout_handle_mouse_motion(struct waylogout_state *state,
+		wl_fixed_t x, wl_fixed_t y) {
+	struct waylogout_action *action_iter;
+	wl_list_for_each(action_iter, &state->actions, link)
+		if (action_iter == state->hovered_action) {
+			mouse_enter_motion_selection(state, action_iter,
+					wl_fixed_to_int(x), wl_fixed_to_int(y));
+			break;
+		}
+}
+
 void waylogout_handle_mouse(struct waylogout_state *state) {
 	// if (state->auth_state == AUTH_STATE_GRACE && !state->args.password_grace_no_mouse) {
 	// 	state->run_display = false;
@@ -30,8 +81,6 @@ void waylogout_handle_touch(struct waylogout_state *state) {
 
 void waylogout_handle_key(struct waylogout_state *state,
 		xkb_keysym_t keysym, uint32_t codepoint) {
-
-	// TODO handle navigation by arrow keys
 
 	struct wl_list *selection;
 	struct waylogout_action *action_iter;
@@ -64,17 +113,6 @@ void waylogout_handle_key(struct waylogout_state *state,
 		state->selected_action = wl_container_of(selection, action_iter, link);
 		damage_state(state);
 		break;
-	// case XKB_KEY_Caps_Lock:
-	// case XKB_KEY_Shift_L:
-	// case XKB_KEY_Shift_R:
-	// case XKB_KEY_Control_L:
-	// case XKB_KEY_Control_R:
-	// case XKB_KEY_Meta_L:
-	// case XKB_KEY_Meta_R:
-	// case XKB_KEY_Alt_L:
-	// case XKB_KEY_Alt_R:
-	// case XKB_KEY_Super_L:
-	// case XKB_KEY_Super_R:
 	case XKB_KEY_F1:
 		codepoint = 1;
 		 /* fallthrough */

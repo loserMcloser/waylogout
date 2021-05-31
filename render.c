@@ -6,14 +6,13 @@
 #include "cairo.h"
 #include "background-image.h"
 #include "waylogout.h"
-//#include "log.h"
+#include "log.h"
 
 #define M_PI 3.14159265358979323846
 
 static void set_color_for_state(cairo_t *cairo, bool selected,
 		struct waylogout_colorset *colorset) {
 	cairo_set_source_u32(cairo, selected ? colorset->highlight : colorset->normal);
-	// TODO mouse position state
 }
 
 void render_frame_background(struct waylogout_surface *surface) {
@@ -104,13 +103,10 @@ void render_frame(struct waylogout_action *action,
 
 	double indicator_xcenter = fr_common.x_center - ((wl_list_length(&state->actions) - 1) / 2.0f - fr_common.n_drawn) * fr_common.x_offset;
 
-	action->indicator_xcenter = indicator_xcenter;
-
 	double dbl_subsurf_xcenter = indicator_xcenter -
 			buffer_width / (2.0f * surface->scale) + 2 / (1.0f * surface->scale);
 	int subsurf_xcenter = dbl_subsurf_xcenter;
 
-	action->indicator_ycenter = fr_common.y_center;
 	int subsurf_ycenter = fr_common.y_center -
 			(state->args.radius + state->args.thickness);
 
@@ -269,4 +265,5 @@ void render_frames(struct waylogout_surface *surface) {
 		render_frame(action_iter, surface, fr_common);
 		++fr_common.n_drawn;
 	}
+
 }
