@@ -58,8 +58,7 @@ struct waylogout_action {
 	char symbol[8];
 	char *command;
 	xkb_keysym_t shortcut;
-	void *prev;
-	void *next;
+	struct wl_list link;
 };
 
 struct waylogout_state {
@@ -74,10 +73,8 @@ struct waylogout_state {
 	struct wl_list surfaces;
 	struct wl_list images;
 	struct waylogout_args args;
-	struct waylogout_action *first_action;
-	struct waylogout_action *last_action;
+	struct wl_list actions;
 	struct waylogout_action *selected_action;
-	int n_actions;
 	struct waylogout_xkb xkb;
 	int render_randnum;
 	size_t n_screenshots_done;

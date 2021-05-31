@@ -33,6 +33,7 @@ void waylogout_handle_key(struct waylogout_state *state,
 
 	// TODO handle navigation by arrow keys
 
+	struct wl_list *selection;
 	struct waylogout_action *action_iter;
 
 	switch (keysym) {
@@ -44,17 +45,23 @@ void waylogout_handle_key(struct waylogout_state *state,
 		state->run_display = false;
 		break;
 	case XKB_KEY_Left:
-		if (state->selected_action)
-			state->selected_action = state->selected_action->prev;
-		else
-			state->selected_action = state->last_action;
+		if (state->selected_action) {
+			selection = state->selected_action->link.prev;
+			if (selection == &state->actions)
+				selection = state->actions.prev;
+		} else
+			selection = state->actions.prev;
+		state->selected_action = wl_container_of(selection, action_iter, link);
 		damage_state(state);
 		break;
 	case XKB_KEY_Right:
-		if (state->selected_action)
-			state->selected_action = state->selected_action->next;
-		else
-			state->selected_action = state->first_action;
+		if (state->selected_action) {
+			selection = state->selected_action->link.next;
+			if (selection == &state->actions)
+				selection = state->actions.next;
+		} else
+			selection = state->actions.next;
+		state->selected_action = wl_container_of(selection, action_iter, link);
 		damage_state(state);
 		break;
 	// case XKB_KEY_Caps_Lock:
@@ -129,23 +136,20 @@ void waylogout_handle_key(struct waylogout_state *state,
 			codepoint = 58;
 		if (codepoint > 12)
 			codepoint -= 48;
-		action_iter = state->last_action;
+		struct wl_list *list_iter = &state->actions;
+		if ((int) codepoint > wl_list_length(&state->actions))
+			++codepoint;
 		for (uint32_t count = 0; count < codepoint; ++count)
-			action_iter = action_iter->next;
-		state->selected_action = action_iter;
+			list_iter = list_iter->next;
+		state->selected_action = wl_container_of(list_iter, action_iter, link);
 		damage_state(state);
 		break;
 	default:
-		action_iter = state->first_action;
-		while (true) {
+		wl_list_for_each(action_iter, &state->actions, link)
 			if (action_iter->shortcut == keysym) {
 				state->selected_action = action_iter;
 				damage_state(state);
 				break;
 			}
-			if (action_iter == state->last_action)
-				break;
-			action_iter = action_iter->next;
-		}
 	}
 }

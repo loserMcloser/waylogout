@@ -855,36 +855,18 @@ static void add_action(struct waylogout_state *state, char *label,
 		new_action->command = strdup(command);
 	new_action->shortcut = shortcut;
 
-	if (state->n_actions == 0)
-		state->first_action = new_action;
-	else
-		state->last_action->next = new_action;
+	wl_list_insert(&state->actions, &new_action->link);
 
-	new_action->next = state->first_action;
-
-	// this will be undefined if this is the first action,
-	// but in that case the line immediately following this one will fix things
-	new_action->prev = state->last_action;
-
-	state->first_action->prev = new_action;
-	state->last_action = new_action;
-	++state->n_actions;
-
-	waylogout_log(LOG_DEBUG, "First action: pointer %p", state->first_action);
 	waylogout_log(LOG_DEBUG,
 	  "Action %s:  \n"
 	  "  pointer %p\n"
 	  "  symbol  %s\n"
-	  "  command %s\n"
-	  "  prev    %p\n"
-	  "  next    %p  "
+	  "  command %s  "
 	  ,
-	  state->last_action->label,
-	  state->last_action,
-	  state->last_action->symbol,
-	  state->last_action->command,
-	  state->last_action->prev,
-	  state->last_action->next
+	  new_action->label,
+	  new_action,
+	  new_action->symbol,
+	  new_action->command
 	);
 }
 
@@ -1575,11 +1557,12 @@ int main(int argc, char **argv) {
 		.effects = NULL,
 		.effects_count = 0,
 	};
-	state.selected_action = NULL;
-	state.n_actions = 0;
 
 	wl_list_init(&state.images);
 	set_default_colors(&state.args.colors);
+
+	state.selected_action = NULL;
+	wl_list_init(&state.actions);
 
 	char *config_path = NULL;
 	int result = parse_options(argc, argv, NULL, NULL, &config_path);
@@ -1613,14 +1596,15 @@ int main(int argc, char **argv) {
 	if (!state.args.hide_cancel)
 		add_action(&state, "cancel", "", NULL, XKB_KEY_c);
 
-	int n_non_cancel_actions = state.n_actions - (!state.args.hide_cancel);
+	int n_actions = wl_list_length(&state.actions);
+	int n_non_cancel_actions = n_actions - (!state.args.hide_cancel);
 	if (n_non_cancel_actions < 1) {
 		waylogout_log(LOG_ERROR, "No action commands configured --- "
 				"no point running if user's only option is to do nothing.");
 		return EXIT_FAILURE;
 	}
 
-	waylogout_log(LOG_DEBUG, "Found %d configured actions", state.n_actions);
+	waylogout_log(LOG_DEBUG, "Found %d configured actions", n_actions);
 
 	if (line_mode == LM_INSIDE) {
 		state.args.colors.line = state.args.colors.inside;

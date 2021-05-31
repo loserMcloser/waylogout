@@ -156,16 +156,15 @@ void render_frame(struct waylogout_surface *surface) {
 	cairo_paint(cairo);
 	cairo_restore(cairo);
 
-	struct waylogout_action *action_iter = state->last_action;
-	for (int i = 0; i < state->n_actions; ++i) {
-
-		action_iter = action_iter->next;
+	int n_drawn = 0;
+	struct waylogout_action *action_iter;
+	wl_list_for_each(action_iter, &state->actions, link) {
 
 		bool selected = (action_iter == state->selected_action);
 
 		int this_width = indicator_diameter;
 
-		double x_pos = (buffer_width / 2.0f) - ((state->n_actions - 1) / 2.0f - i) * x_offset;
+		double x_pos = (buffer_width / 2.0f) - ((wl_list_length(&state->actions) - 1) / 2.0f - n_drawn) * x_offset;
 
 		// Draw circle
 		cairo_set_line_width(cairo, arc_thickness);
@@ -244,6 +243,7 @@ void render_frame(struct waylogout_surface *surface) {
 		cairo_stroke(cairo);
 
 		new_width += this_width + indicator_sep;
+		++n_drawn;
 	}
 
 	new_width -= indicator_sep;
