@@ -13,7 +13,7 @@ enum background_mode {
 	BACKGROUND_MODE_INVALID,
 };
 
-struct swaylogout_surface;
+struct waylogout_surface;
 
 enum background_mode parse_background_mode(const char *mode);
 cairo_surface_t *load_background_image(const char *path);

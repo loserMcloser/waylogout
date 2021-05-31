@@ -1,16 +1,16 @@
-#ifndef _SWAYLOGOUT_EFFECTS_H
-#define _SWAYLOGOUT_EFFECTS_H
+#ifndef _WAYLOGOUT_EFFECTS_H
+#define _WAYLOGOUT_EFFECTS_H
 
 #include <stdbool.h>
 
 #include "cairo.h"
 
-struct swaylogout_effect_screen_pos {
+struct waylogout_effect_screen_pos {
 	float pos;
 	bool is_percent;
 };
 
-struct swaylogout_effect {
+struct waylogout_effect {
 	union {
 		struct {
 			int radius, times;
@@ -24,10 +24,10 @@ struct swaylogout_effect {
 			double factor;
 		} vignette;
 		struct {
-			struct swaylogout_effect_screen_pos x;
-			struct swaylogout_effect_screen_pos y;
-			struct swaylogout_effect_screen_pos w;
-			struct swaylogout_effect_screen_pos h;
+			struct waylogout_effect_screen_pos x;
+			struct waylogout_effect_screen_pos y;
+			struct waylogout_effect_screen_pos w;
+			struct waylogout_effect_screen_pos h;
 			enum {
 				EFFECT_COMPOSE_GRAV_CENTER,
 				EFFECT_COMPOSE_GRAV_NW,
@@ -55,10 +55,10 @@ struct swaylogout_effect {
 	} tag;
 };
 
-cairo_surface_t *swaylogout_effects_run(cairo_surface_t *surface, int scale,
-		struct swaylogout_effect *effects, int count);
+cairo_surface_t *waylogout_effects_run(cairo_surface_t *surface, int scale,
+		struct waylogout_effect *effects, int count);
 
-cairo_surface_t *swaylogout_effects_run_timed(cairo_surface_t *surface, int scale,
-		struct swaylogout_effect *effects, int count);
+cairo_surface_t *waylogout_effects_run_timed(cairo_surface_t *surface, int scale,
+		struct waylogout_effect *effects, int count);
 
 #endif

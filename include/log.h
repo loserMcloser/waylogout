@@ -1,5 +1,5 @@
-#ifndef _SWAYLOGOUT_LOG_H
-#define _SWAYLOGOUT_LOG_H
+#ifndef _WAYLOGOUT_LOG_H
+#define _WAYLOGOUT_LOG_H
 
 #include <stdarg.h>
 #include <string.h>
@@ -14,7 +14,7 @@ enum log_importance {
 	LOG_IMPORTANCE_LAST,
 };
 
-void swaylogout_log_init(enum log_importance verbosity);
+void waylogout_log_init(enum log_importance verbosity);
 
 #ifdef __GNUC__
 #define _ATTRIB_PRINTF(start, end) __attribute__((format(printf, start, end)))
@@ -22,21 +22,21 @@ void swaylogout_log_init(enum log_importance verbosity);
 #define _ATTRIB_PRINTF(start, end)
 #endif
 
-void _swaylogout_log(enum log_importance verbosity, const char *format, ...)
+void _waylogout_log(enum log_importance verbosity, const char *format, ...)
 	_ATTRIB_PRINTF(2, 3);
 
-void _swaylogout_trace(const char *file, int line, const char *func);
+void _waylogout_trace(const char *file, int line, const char *func);
 
-const char *_swaylogout_strip_path(const char *filepath);
+const char *_waylogout_strip_path(const char *filepath);
 
-#define swaylogout_log(verb, fmt, ...) \
-	_swaylogout_log(verb, "[%s:%d] " fmt, _swaylock_strip_path(__FILE__), \
+#define waylogout_log(verb, fmt, ...) \
+	_waylogout_log(verb, "[%s:%d] " fmt, _waylogout_strip_path(__FILE__), \
 			__LINE__, ##__VA_ARGS__)
 
-#define swaylogout_log_errno(verb, fmt, ...) \
-	swaylogout_log(verb, fmt ": %s", ##__VA_ARGS__, strerror(errno))
+#define waylogout_log_errno(verb, fmt, ...) \
+	waylogout_log(verb, fmt ": %s", ##__VA_ARGS__, strerror(errno))
 
-#define swaylogout_trace() \
-	_swaylogout_trace(__FILE__, __LINE__, __func__)
+#define waylogout_trace() \
+	_waylogout_trace(__FILE__, __LINE__, __func__)
 
 #endif

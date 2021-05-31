@@ -2,7 +2,7 @@
 #include "background-image.h"
 #include "cairo.h"
 #include "log.h"
-#include "swaylogout.h"
+#include "waylogout.h"
 
 // Cairo RGB24 uses 32 bits per pixel, as XRGB, in native endianness.
 // xrgb32_le uses 32 bits per pixel, as XRGB, little endian (BGRX big endian).
@@ -46,7 +46,7 @@ enum background_mode parse_background_mode(const char *mode) {
 	} else if (strcmp(mode, "solid_color") == 0) {
 		return BACKGROUND_MODE_SOLID_COLOR;
 	}
-	swaylogout_log(LOG_ERROR, "Unsupported background mode: %s", mode);
+	waylogout_log(LOG_ERROR, "Unsupported background mode: %s", mode);
 	return BACKGROUND_MODE_INVALID;
 }
 
@@ -65,7 +65,7 @@ cairo_surface_t *load_background_from_buffer(void *buf, uint32_t format,
 		image = cairo_image_surface_create(CAIRO_FORMAT_RGB24, width, height);
 	}
 	if (image == NULL) {
-		swaylogout_log(LOG_ERROR, "Failed to create image..");
+		waylogout_log(LOG_ERROR, "Failed to create image..");
 		return NULL;
 	}
 
@@ -171,7 +171,7 @@ cairo_surface_t *load_background_from_buffer(void *buf, uint32_t format,
 				cairo_image_surface_get_stride(image));
 	} else {
 		if (format != WL_SHM_FORMAT_XRGB8888 && format != WL_SHM_FORMAT_ARGB8888) {
-			swaylogout_log(LOG_ERROR,
+			waylogout_log(LOG_ERROR,
 					"Unknown pixel format: %u. Assuming XRGB32. Colors may look wrong.",
 					format);
 		}
@@ -197,7 +197,7 @@ cairo_surface_t *load_background_image(const char *path) {
 	GError *err = NULL;
 	GdkPixbuf *pixbuf = gdk_pixbuf_new_from_file(path, &err);
 	if (!pixbuf) {
-		swaylogout_log(LOG_ERROR, "Failed to load background image (%s).",
+		waylogout_log(LOG_ERROR, "Failed to load background image (%s).",
 				err->message);
 		return NULL;
 	}
@@ -207,11 +207,11 @@ cairo_surface_t *load_background_image(const char *path) {
 	image = cairo_image_surface_create_from_png(path);
 #endif // HAVE_GDK_PIXBUF
 	if (!image) {
-		swaylogout_log(LOG_ERROR, "Failed to read background image.");
+		waylogout_log(LOG_ERROR, "Failed to read background image.");
 		return NULL;
 	}
 	if (cairo_surface_status(image) != CAIRO_STATUS_SUCCESS) {
-		swaylogout_log(LOG_ERROR, "Failed to read background image: %s."
+		waylogout_log(LOG_ERROR, "Failed to read background image: %s."
 #if !HAVE_GDK_PIXBUF
 				"\nSway was compiled without gdk_pixbuf support, so only"
 				"\nPNG images can be loaded. This is the likely cause."

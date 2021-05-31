@@ -1,6 +1,6 @@
 #include "fade.h"
 #include "pool-buffer.h"
-#include "swaylogout.h"
+#include "waylogout.h"
 #include <stdio.h>
 #include <omp.h>
 #include <stdalign.h>
@@ -73,7 +73,7 @@ static void set_alpha_slow(uint32_t *orig, struct pool_buffer *buf, float alpha)
 
 #endif
 
-void fade_prepare(struct swaylogout_fade *fade, struct pool_buffer *buffer) {
+void fade_prepare(struct waylogout_fade *fade, struct pool_buffer *buffer) {
 	if (!fade->target_time) {
 		fade->original_buffer = NULL;
 		return;
@@ -86,7 +86,7 @@ void fade_prepare(struct swaylogout_fade *fade, struct pool_buffer *buffer) {
 	set_alpha(fade->original_buffer, buffer, 0);
 }
 
-void fade_update(struct swaylogout_fade *fade, struct pool_buffer *buffer, uint32_t time) {
+void fade_update(struct waylogout_fade *fade, struct pool_buffer *buffer, uint32_t time) {
 	if (fade->current_time >= fade->target_time) {
 		return;
 	}
@@ -118,10 +118,10 @@ void fade_update(struct swaylogout_fade *fade, struct pool_buffer *buffer, uint3
 #endif
 }
 
-bool fade_is_complete(struct swaylogout_fade *fade) {
+bool fade_is_complete(struct waylogout_fade *fade) {
 	return fade->target_time == 0 || fade->current_time >= fade->target_time;
 }
 
-void fade_destroy(struct swaylogout_fade *fade) {
+void fade_destroy(struct waylogout_fade *fade) {
 	free(fade->original_buffer);
 }

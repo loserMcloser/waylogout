@@ -18,13 +18,13 @@ static const char *verbosity_colors[] = {
 	[LOG_TRACE ] = "\x1B[1;32m",
 };
 
-void swaylogout_log_init(enum log_importance verbosity) {
+void waylogout_log_init(enum log_importance verbosity) {
 	if (verbosity < LOG_IMPORTANCE_LAST) {
 		log_importance = verbosity;
 	}
 }
 
-void _swaylogout_log(enum log_importance verbosity, const char *fmt, ...) {
+void _waylogout_log(enum log_importance verbosity, const char *fmt, ...) {
 	if (verbosity > log_importance) {
 		return;
 	}
@@ -60,17 +60,17 @@ void _swaylogout_log(enum log_importance verbosity, const char *fmt, ...) {
 }
 
 // This is mainly here for performance.
-// Don't want to do _swaylogout_strip_path every event if we're not tracing.
-void _swaylogout_trace(const char *file, int line, const char *func) {
+// Don't want to do _waylogout_strip_path every event if we're not tracing.
+void _waylogout_trace(const char *file, int line, const char *func) {
 	if (LOG_TRACE > log_importance) {
 		return;
 	}
 
-	_swaylogout_log(LOG_TRACE, "[%s:%d]: trace: %s",
-			_swaylogout_strip_path(file), line, func);
+	_waylogout_log(LOG_TRACE, "[%s:%d]: trace: %s",
+			_waylogout_strip_path(file), line, func);
 }
 
-const char *_swaylogout_strip_path(const char *filepath) {
+const char *_waylogout_strip_path(const char *filepath) {
 	if (*filepath == '.') {
 		while (*filepath == '.' || *filepath == '/') {
 			++filepath;

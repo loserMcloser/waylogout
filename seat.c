@@ -4,23 +4,23 @@
 #include <unistd.h>
 #include <xkbcommon/xkbcommon.h>
 #include "log.h"
-#include "swaylogout.h"
+#include "waylogout.h"
 #include "seat.h"
 #include "loop.h"
 
 static void keyboard_keymap(void *data, struct wl_keyboard *wl_keyboard,
 		uint32_t format, int32_t fd, uint32_t size) {
-	struct swaylogout_seat *seat = data;
-	struct swaylogout_state *state = seat->state;
+	struct waylogout_seat *seat = data;
+	struct waylogout_state *state = seat->state;
 	if (format != WL_KEYBOARD_KEYMAP_FORMAT_XKB_V1) {
 		close(fd);
-		swaylogout_log(LOG_ERROR, "Unknown keymap format %d, aborting", format);
+		waylogout_log(LOG_ERROR, "Unknown keymap format %d, aborting", format);
 		exit(1);
 	}
 	char *map_shm = mmap(NULL, size - 1, PROT_READ, MAP_PRIVATE, fd, 0);
 	if (map_shm == MAP_FAILED) {
 		close(fd);
-		swaylogout_log(LOG_ERROR, "Unable to initialize keymap shm, aborting");
+		waylogout_log(LOG_ERROR, "Unable to initialize keymap shm, aborting");
 		exit(1);
 	}
 	struct xkb_keymap *keymap = xkb_keymap_new_from_buffer(
@@ -48,24 +48,24 @@ static void keyboard_leave(void *data, struct wl_keyboard *wl_keyboard,
 }
 
 static void keyboard_repeat(void *data) {
-	struct swaylogout_seat *seat = data;
-	struct swaylogout_state *state = seat->state;
+	struct waylogout_seat *seat = data;
+	struct waylogout_state *state = seat->state;
 	seat->repeat_timer = loop_add_timer(
 		state->eventloop, seat->repeat_period_ms, keyboard_repeat, seat);
-	swaylogout_handle_key(state, seat->repeat_sym, seat->repeat_codepoint);
+	waylogout_handle_key(state, seat->repeat_sym, seat->repeat_codepoint);
 }
 
 static void keyboard_key(void *data, struct wl_keyboard *wl_keyboard,
 		uint32_t serial, uint32_t time, uint32_t key, uint32_t _key_state) {
-	struct swaylogout_seat *seat = data;
-	struct swaylogout_state *state = seat->state;
+	struct waylogout_seat *seat = data;
+	struct waylogout_state *state = seat->state;
 	enum wl_keyboard_key_state key_state = _key_state;
 	xkb_keysym_t sym = xkb_state_key_get_one_sym(state->xkb.state, key + 8);
 	uint32_t keycode = key_state == WL_KEYBOARD_KEY_STATE_PRESSED ?
 		key + 8 : 0;
 	uint32_t codepoint = xkb_state_key_get_utf32(state->xkb.state, keycode);
 	if (key_state == WL_KEYBOARD_KEY_STATE_PRESSED) {
-		swaylogout_handle_key(state, sym, codepoint);
+		waylogout_handle_key(state, sym, codepoint);
 	}
 
 	if (seat->repeat_timer) {
@@ -84,8 +84,8 @@ static void keyboard_key(void *data, struct wl_keyboard *wl_keyboard,
 static void keyboard_modifiers(void *data, struct wl_keyboard *wl_keyboard,
 		uint32_t serial, uint32_t mods_depressed, uint32_t mods_latched,
 		uint32_t mods_locked, uint32_t group) {
-	struct swaylogout_seat *seat = data;
-	struct swaylogout_state *state = seat->state;
+	struct waylogout_seat *seat = data;
+	struct waylogout_state *state = seat->state;
 	int layout_same = xkb_state_layout_index_is_active(state->xkb.state,
 		group, XKB_STATE_LAYOUT_EFFECTIVE);
 	if (!layout_same) {
@@ -106,7 +106,7 @@ static void keyboard_modifiers(void *data, struct wl_keyboard *wl_keyboard,
 
 static void keyboard_repeat_info(void *data, struct wl_keyboard *wl_keyboard,
 		int32_t rate, int32_t delay) {
-	struct swaylogout_seat *seat = data;
+	struct waylogout_seat *seat = data;
 	if (rate <= 0) {
 		seat->repeat_period_ms = -1;
 	} else {
@@ -138,17 +138,17 @@ static void wl_pointer_leave(void *data, struct wl_pointer *wl_pointer,
 
 static void wl_pointer_motion(void *data, struct wl_pointer *wl_pointer,
 		uint32_t time, wl_fixed_t surface_x, wl_fixed_t surface_y) {
-	swaylogout_handle_mouse((struct swaylock_state *)data);
+	waylogout_handle_mouse((struct waylogout_state *)data);
 }
 
 static void wl_pointer_button(void *data, struct wl_pointer *wl_pointer,
 		uint32_t serial, uint32_t time, uint32_t button, uint32_t state) {
-	swaylogout_handle_mouse((struct swaylock_state *)data);
+	waylogout_handle_mouse((struct waylogout_state *)data);
 }
 
 static void wl_pointer_axis(void *data, struct wl_pointer *wl_pointer,
 		uint32_t time, uint32_t axis, wl_fixed_t value) {
-	swaylogout_handle_mouse((struct swaylock_state *)data);
+	waylogout_handle_mouse((struct waylogout_state *)data);
 }
 
 static void wl_pointer_frame(void *data, struct wl_pointer *wl_pointer) {
@@ -184,7 +184,7 @@ static const struct wl_pointer_listener pointer_listener = {
 
 static void wl_touch_down(void *data, struct wl_touch *touch, uint32_t serial,
 		uint32_t time, struct wl_surface *surface, int32_t id, wl_fixed_t x, wl_fixed_t y) {
-	swaylogout_handle_touch((struct swaylock_state *)data);
+	waylogout_handle_touch((struct waylogout_state *)data);
 }
 
 static void wl_touch_up(void *data, struct wl_touch *touch, uint32_t serial,
@@ -194,7 +194,7 @@ static void wl_touch_up(void *data, struct wl_touch *touch, uint32_t serial,
 
 static void wl_touch_motion(void *data, struct wl_touch *touch, uint32_t time,
 		int32_t id, wl_fixed_t x, wl_fixed_t y) {
-	swaylogout_handle_touch((struct swaylock_state *)data);
+	waylogout_handle_touch((struct waylogout_state *)data);
 }
 
 static void wl_touch_frame(void *data, struct wl_touch *touch) {
@@ -215,7 +215,7 @@ static const struct wl_touch_listener touch_listener = {
 
 static void seat_handle_capabilities(void *data, struct wl_seat *wl_seat,
 		enum wl_seat_capability caps) {
-	struct swaylogout_seat *seat = data;
+	struct waylogout_seat *seat = data;
 	if (seat->pointer) {
 		wl_pointer_release(seat->pointer);
 		seat->pointer = NULL;

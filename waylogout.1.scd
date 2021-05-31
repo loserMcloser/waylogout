@@ -1,12 +1,12 @@
-swaylogout(1)
+waylogout(1)
 
 # NAME
 
-swaylogout-effects - Fancier screen locker for Wayland
+waylogout-effects - Fancier screen locker for Wayland
 
 # SYNOPSIS
 
-_swaylogout_ [options...]
+_waylogout_ [options...]
 
 Locks your Wayland session.
 
@@ -14,8 +14,8 @@ Locks your Wayland session.
 
 *-C, --config* <path>
 	The config file to use. By default, the following paths are checked:
-	_$HOME/.swaylogout/config_, _$XDG\_CONFIG\_HOME/swaylock/config_, and
-	_SYSCONFDIR/swaylogout/config_. All flags aside from this one are valid
+	_$HOME/.waylogout/config_, _$XDG\_CONFIG\_HOME/waylogout/config_, and
+	_SYSCONFDIR/waylogout/config_. All flags aside from this one are valid
 	options in the configuration file using the format _long-option=value_.
 	For options such as _ignore-empty-password_, just supply the _long-option_.
 	All leading dashes should be omitted and the equals sign is required for
@@ -252,8 +252,8 @@ Locks your Wayland session.
 
 *--effect-custom <path>*
 	Load a custom effect from a shared object. The .so must export a++
-*void swaylogout_effect(uint32\_t \*data, int width, int height, int scale)*++
-or an *uint32\_t swaylogout_pixel(uint32\_t pix, int x, int y, int width, int height)*.
+*void waylogout_effect(uint32\_t \*data, int width, int height, int scale)*++
+or an *uint32\_t waylogout_pixel(uint32\_t pix, int x, int y, int width, int height)*.
 
 *--time-effects*
 	Measure the time it takes to run each effect.
@@ -262,5 +262,5 @@ or an *uint32\_t swaylogout_pixel(uint32\_t pix, int x, int y, int width, int he
 
 Maintained by Martin Dørum, forked from upstream Swaylock which is maintained
 by Drew DeVault.
-For more information about swaylogout-effects development, see
-https://github.com/mortie/swaylogout-effects.
+For more information about waylogout-effects development, see
+https://github.com/mortie/waylogout-effects.

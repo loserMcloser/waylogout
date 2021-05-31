@@ -25,7 +25,7 @@
 
 extern char **environ;
 
-static int screen_size_to_pix(struct swaylogout_effect_screen_pos size, int screensize, int scale) {
+static int screen_size_to_pix(struct waylogout_effect_screen_pos size, int screensize, int scale) {
 	if (size.is_percent) {
 		return (size.pos / 100.0) * screensize;
 	} else if (size.pos > 0) {
@@ -35,7 +35,7 @@ static int screen_size_to_pix(struct swaylogout_effect_screen_pos size, int scre
 	}
 }
 
-static int screen_pos_to_pix(struct swaylogout_effect_screen_pos pos, int screensize, int scale) {
+static int screen_pos_to_pix(struct waylogout_effect_screen_pos pos, int screensize, int scale) {
 	int actual;
 	if (pos.is_percent) {
 		actual = (pos.pos / 100.0) * screensize;
@@ -50,7 +50,7 @@ static int screen_pos_to_pix(struct swaylogout_effect_screen_pos pos, int screen
 	return actual;
 }
 
-static const char *effect_name(struct swaylogout_effect *effect) {
+static const char *effect_name(struct waylogout_effect *effect) {
 	switch (effect->tag) {
 	case EFFECT_BLUR: return "blur";
 	case EFFECT_PIXELATE: return "pixelate";
@@ -65,8 +65,8 @@ static const char *effect_name(struct swaylogout_effect *effect) {
 }
 
 static void screen_pos_pair_to_pix(
-		struct swaylogout_effect_screen_pos posx,
-		struct swaylogout_effect_screen_pos posy,
+		struct waylogout_effect_screen_pos posx,
+		struct waylogout_effect_screen_pos posy,
 		int objwidth, int objheight,
 		int screenwidth, int screenheight, int scale, int gravity,
 		int *outx, int *outy) {
@@ -351,16 +351,16 @@ static void effect_vignette(uint32_t *data, int width, int height,
 }
 
 static void effect_compose(uint32_t *data, int width, int height, int scale,
-		struct swaylogout_effect_screen_pos posx,
-		struct swaylogout_effect_screen_pos posy,
-		struct swaylogout_effect_screen_pos posw,
-		struct swaylogout_effect_screen_pos posh,
+		struct waylogout_effect_screen_pos posx,
+		struct waylogout_effect_screen_pos posy,
+		struct waylogout_effect_screen_pos posw,
+		struct waylogout_effect_screen_pos posh,
 		int gravity, char *imgpath) {
 #if !HAVE_GDK_PIXBUF
 	(void)&blend_pixels;
 	(void)&screen_size_to_pix;
 	(void)&screen_pos_pair_to_pix;
-	swaylogout_log(LOG_ERROR, "Compose effect: Compiled without gdk_pixbuf support.\n");
+	waylogout_log(LOG_ERROR, "Compose effect: Compiled without gdk_pixbuf support.\n");
 	return;
 #else
 	int imgw = screen_size_to_pix(posw, width, scale);
@@ -371,7 +371,7 @@ static void effect_compose(uint32_t *data, int width, int height, int scale,
 	GdkPixbuf *pixbuf = gdk_pixbuf_new_from_file_at_scale(
 			imgpath, imgw, imgh, preserve_aspect, &err);
 	if (!pixbuf) {
-		swaylogout_log(LOG_ERROR, "Compose effect: Failed to load image file '%s' (%s).",
+		waylogout_log(LOG_ERROR, "Compose effect: Failed to load image file '%s' (%s).",
 				imgpath, err->message);
 		g_error_free(err);
 		return;
@@ -425,12 +425,12 @@ static void effect_custom_run(uint32_t *data, int width, int height, int scale,
 		char *path) {
 	void *dl = dlopen(path, RTLD_LAZY);
 	if (dl == NULL) {
-		swaylogout_log(LOG_ERROR, "Custom effect: %s", dlerror());
+		waylogout_log(LOG_ERROR, "Custom effect: %s", dlerror());
 		return;
 	}
 
 	void (*effect_func)(uint32_t *data, int width, int height, int scale) =
-		dlsym(dl, "swaylogout_effect");
+		dlsym(dl, "waylogout_effect");
 	if (effect_func != NULL) {
 		effect_func(data, width, height, scale);
 		dlclose(dl);
@@ -438,7 +438,7 @@ static void effect_custom_run(uint32_t *data, int width, int height, int scale,
 	}
 
 	uint32_t (*pixel_func)(uint32_t pix, int x, int y, int width, int height) =
-		dlsym(dl, "swaylogout_pixel");
+		dlsym(dl, "waylogout_pixel");
 	if (pixel_func != NULL) {
 #pragma omp parallel for
 		for (int y = 0; y < height; ++y) {
@@ -452,8 +452,8 @@ static void effect_custom_run(uint32_t *data, int width, int height, int scale,
 		return;
 	}
 
-	(void)dlsym(dl, "swaylogout_effect"); // Change the result of dlerror()
-	swaylogout_log(LOG_ERROR, "Custom effect: %s", dlerror());
+	(void)dlsym(dl, "waylogout_effect"); // Change the result of dlerror()
+	waylogout_log(LOG_ERROR, "Custom effect: %s", dlerror());
 }
 
 static bool file_is_outdated(const char *input, const char *output) {
@@ -485,23 +485,23 @@ static char *effect_custom_compile(const char *path) {
 	if (!cachepath) {
 		char *xdgdir = getenv("XDG_DATA_HOME");
 		if (xdgdir) {
-			cachepath = malloc(strlen(xdgdir) + strlen("/swaylogout") + 1);
-			cachelen = sprintf(cachepath, "%s/swaylogout", xdgdir);
+			cachepath = malloc(strlen(xdgdir) + strlen("/waylogout") + 1);
+			cachelen = sprintf(cachepath, "%s/waylogout", xdgdir);
 		} else {
 			char *homedir = getenv("HOME");
 			if (homedir == NULL) {
-				swaylogout_log(LOG_ERROR,
+				waylogout_log(LOG_ERROR,
 						"Can't compile custom effect; neither $HOME nor $XDG_CONFIG_HOME "
 						"is defined.");
 				return NULL;
 			}
 
-			cachepath = malloc(strlen(homedir) + strlen("/.cache/swaylogout") + 1);
-			cachelen = sprintf(cachepath, "%s/.cache/swaylogout", homedir);
+			cachepath = malloc(strlen(homedir) + strlen("/.cache/waylogout") + 1);
+			cachelen = sprintf(cachepath, "%s/.cache/waylogout", homedir);
 		}
 
 		if (mkdir(cachepath, 0777) < 0 && errno != EEXIST) {
-			swaylogout_log(LOG_ERROR,
+			waylogout_log(LOG_ERROR,
 					"Can't compile custom effect; mkdir %s failed: %s\n",
 					cachepath, strerror(errno));
 			free(cachepath);
@@ -544,11 +544,11 @@ static char *effect_custom_compile(const char *path) {
 	free(cmd);
 	if (ret != 0) {
 		if (ret == -1) {
-			swaylogout_log(LOG_ERROR, "Custom effect: system(): %s", strerror(errno));
+			waylogout_log(LOG_ERROR, "Custom effect: system(): %s", strerror(errno));
 			free(outpath);
 			return NULL;
 		} else {
-			swaylogout_log(LOG_ERROR, "Custom effect compilation failed\n");
+			waylogout_log(LOG_ERROR, "Custom effect compilation failed\n");
 			free(outpath);
 			return NULL;
 		}
@@ -569,14 +569,14 @@ static void effect_custom(uint32_t *data, int width, int height, int scale,
 			free(compiled);
 		}
 	} else {
-		swaylogout_log(
+		waylogout_log(
 			LOG_ERROR, "%s: Unknown file type for custom effect (expected .c or .so)",
 			path);
 	}
 }
 
 static cairo_surface_t *run_effect(cairo_surface_t *surface, int scale,
-		struct swaylogout_effect *effect) {
+		struct waylogout_effect *effect) {
 	switch (effect->tag) {
 	case EFFECT_BLUR: {
 		cairo_surface_t *surf = cairo_image_surface_create(
@@ -585,7 +585,7 @@ static cairo_surface_t *run_effect(cairo_surface_t *surface, int scale,
 				cairo_image_surface_get_height(surface));
 
 		if (cairo_surface_status(surf) != CAIRO_STATUS_SUCCESS) {
-			swaylogout_log(LOG_ERROR, "Failed to create surface for blur effect");
+			waylogout_log(LOG_ERROR, "Failed to create surface for blur effect");
 			cairo_surface_destroy(surf);
 			break;
 		}
@@ -621,7 +621,7 @@ static cairo_surface_t *run_effect(cairo_surface_t *surface, int scale,
 				cairo_image_surface_get_height(surface) * effect->e.scale);
 
 		if (cairo_surface_status(surf) != CAIRO_STATUS_SUCCESS) {
-			swaylogout_log(LOG_ERROR, "Failed to create surface for scale effect");
+			waylogout_log(LOG_ERROR, "Failed to create surface for scale effect");
 			cairo_surface_destroy(surf);
 			break;
 		}
@@ -690,7 +690,7 @@ static cairo_surface_t *ensure_format(cairo_surface_t *surface) {
 		return surface;
 	}
 
-	swaylogout_log(LOG_DEBUG, "Have to convert surface to CAIRO_FORMAT_RGB24 from %i.",
+	waylogout_log(LOG_DEBUG, "Have to convert surface to CAIRO_FORMAT_RGB24 from %i.",
 			(int)cairo_image_surface_get_format(surface));
 
 	cairo_surface_t *surf = cairo_image_surface_create(
@@ -698,7 +698,7 @@ static cairo_surface_t *ensure_format(cairo_surface_t *surface) {
 			cairo_image_surface_get_width(surface),
 			cairo_image_surface_get_height(surface));
 	if (cairo_surface_status(surf) != CAIRO_STATUS_SUCCESS) {
-		swaylogout_log(LOG_ERROR, "Failed to create surface for scale effect");
+		waylogout_log(LOG_ERROR, "Failed to create surface for scale effect");
 		cairo_surface_destroy(surf);
 		return NULL;
 	}
@@ -711,13 +711,13 @@ static cairo_surface_t *ensure_format(cairo_surface_t *surface) {
 	return surf;
 }
 
-cairo_surface_t *swaylogout_effects_run(cairo_surface_t *surface, int scale,
-		struct swaylogout_effect *effects, int count) {
+cairo_surface_t *waylogout_effects_run(cairo_surface_t *surface, int scale,
+		struct waylogout_effect *effects, int count) {
 	surface = ensure_format(surface);
 	if (surface == NULL) return NULL;
 
 	for (int i = 0; i < count; ++i) {
-		struct swaylogout_effect *effect = &effects[i];
+		struct waylogout_effect *effect = &effects[i];
 		surface = run_effect(surface, scale, effect);
 	}
 
@@ -727,8 +727,8 @@ cairo_surface_t *swaylogout_effects_run(cairo_surface_t *surface, int scale,
 #define TIME_MSEC(tv) ((tv).tv_sec * 1000.0 + (tv).tv_nsec / 1000000.0)
 #define TIME_DELTA(first, last) (TIME_MSEC(last) - TIME_MSEC(first))
 
-cairo_surface_t *swaylogout_effects_run_timed(cairo_surface_t *surface, int scale,
-		struct swaylogout_effect *effects, int count) {
+cairo_surface_t *waylogout_effects_run_timed(cairo_surface_t *surface, int scale,
+		struct waylogout_effect *effects, int count) {
 	struct timespec start_tv;
 	clock_gettime(CLOCK_MONOTONIC, &start_tv);
 
@@ -740,7 +740,7 @@ cairo_surface_t *swaylogout_effects_run_timed(cairo_surface_t *surface, int scal
 		struct timespec effect_start_tv;
 		clock_gettime(CLOCK_MONOTONIC, &effect_start_tv);
 
-		struct swaylogout_effect *effect = &effects[i];
+		struct waylogout_effect *effect = &effects[i];
 		surface = run_effect(surface, scale, effect);
 
 		struct timespec effect_end_tv;

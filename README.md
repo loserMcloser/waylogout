@@ -1,6 +1,6 @@
-# swaylogout
+# waylogout
 
-swaylogout is graphical logout/suspend/reboot/shutdown utility inspired by
+waylogout is graphical logout/suspend/reboot/shutdown utility inspired by
 [oblogout](https://launchpad.net/oblogout)
 and based on code from
 [swaylock-effects](https://github.com/mortie/swaylock-effects).
@@ -9,7 +9,7 @@ TODO screenshot
 
 ## Example Command TODO
 
-	swaylogout \
+	waylogout \
 		--screenshots \
 		--indicator-radius 100 \
 		--indicator-thickness 7 \
@@ -61,5 +61,5 @@ Similar to available effects in
 
 `--effect-custom <path>`: Load a custom effect from a shared object.
 
-The .so must export a function `void swaylogout_effect(uint32_t *data, int width, int height)`
-or a function `uint32_t swaylogout_pixel(uint32_t pix, int x, int y, int width, int height)`.
+The .so must export a function `void waylogout_effect(uint32_t *data, int width, int height)`
+or a function `uint32_t waylogout_pixel(uint32_t pix, int x, int y, int width, int height)`.

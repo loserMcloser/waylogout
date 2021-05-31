@@ -5,26 +5,23 @@
 #include <fcntl.h>
 #include <getopt.h>
 #include <poll.h>
-#include <pwd.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
-#include <sys/types.h>
 #include <time.h>
 #include <unistd.h>
 #include <wayland-client.h>
 #include <wordexp.h>
 #include "background-image.h"
 #include "cairo.h"
-#include "comm.h"
 #include "log.h"
 #include "loop.h"
 #include "pool-buffer.h"
 #include "seat.h"
-#include "swaylogout.h"
+#include "waylogout.h"
 #include "wlr-input-inhibitor-unstable-v1-client-protocol.h"
 #include "wlr-layer-shell-unstable-v1-client-protocol.h"
 #include "wlr-screencopy-unstable-v1-client-protocol.h"
@@ -36,15 +33,15 @@ static uint32_t parse_seconds(const char *seconds) {
 	errno = 0;
 	float val = strtof(seconds, &endptr);
 	if (errno != 0) {
-		swaylogout_log(LOG_DEBUG, "Invalid number for seconds %s, defaulting to 0", seconds);
+		waylogout_log(LOG_DEBUG, "Invalid number for seconds %s, defaulting to 0", seconds);
 		return 0;
 	}
 	if (endptr == seconds) {
-		swaylogout_log(LOG_DEBUG, "No digits were found in %s, defaulting to 0", seconds);
+		waylogout_log(LOG_DEBUG, "No digits were found in %s, defaulting to 0", seconds);
 		return 0;
 	}
 	if (val < 0) {
-		swaylogout_log(LOG_DEBUG, "Negative seconds not allowed for %s, defaulting to 0", seconds);
+		waylogout_log(LOG_DEBUG, "Negative seconds not allowed for %s, defaulting to 0", seconds);
 		return 0;
 	}
 
@@ -58,7 +55,7 @@ static uint32_t parse_color(const char *color) {
 
 	int len = strlen(color);
 	if (len != 6 && len != 8) {
-		swaylogout_log(LOG_DEBUG, "Invalid color %s, defaulting to 0xFFFFFFFF",
+		waylogout_log(LOG_DEBUG, "Invalid color %s, defaulting to 0xFFFFFFFF",
 				color);
 		return 0xFFFFFFFF;
 	}
@@ -69,7 +66,8 @@ static uint32_t parse_color(const char *color) {
 	return res;
 }
 
-static const char *parse_screen_pos(const char *str, struct swaylogout_effect_screen_pos *pos) {
+// TODO might not need this
+static const char *parse_screen_pos(const char *str, struct waylogout_effect_screen_pos *pos) {
 	char *eptr;
 	float res = strtof(str, &eptr);
 	if (eptr == str)
@@ -85,10 +83,11 @@ static const char *parse_screen_pos(const char *str, struct swaylogout_effect_sc
 	}
 }
 
+// TODO might not need this
 static const char *parse_screen_pos_pair(const char *str, char delim,
-		struct swaylogout_effect_screen_pos *pos1,
-		struct swaylogout_effect_screen_pos *pos2) {
-	struct swaylogout_effect_screen_pos tpos1, tpos2;
+		struct waylogout_effect_screen_pos *pos1,
+		struct waylogout_effect_screen_pos *pos2) {
+	struct waylogout_effect_screen_pos tpos1, tpos2;
 	str = parse_screen_pos(str, &tpos1);
 	if (str == NULL || str[0] != delim)
 		return NULL;
@@ -124,9 +123,9 @@ static int parse_gravity_from_xy(float x, float y) {
 		return EFFECT_COMPOSE_GRAV_SE;
 }
 
-static void parse_effect_compose(const char *str, struct swaylogout_effect *effect) {
-	effect->e.compose.x = effect->e.compose.y = (struct swaylogout_effect_screen_pos) { 50, 1 }; // 50%
-	effect->e.compose.w = effect->e.compose.h = (struct swaylogout_effect_screen_pos) { -1, 0 }; // -1
+static void parse_effect_compose(const char *str, struct waylogout_effect *effect) {
+	effect->e.compose.x = effect->e.compose.y = (struct waylogout_effect_screen_pos) { 50, 1 }; // 50%
+	effect->e.compose.w = effect->e.compose.h = (struct waylogout_effect_screen_pos) { -1, 0 }; // -1
 	effect->e.compose.gravity = EFFECT_COMPOSE_GRAV_CENTER;
 	effect->e.compose.imgpath = NULL;
 
@@ -193,56 +192,8 @@ int lenient_strcmp(char *a, char *b) {
 	}
 }
 
-static int daemonize_start() {
-	swaylogout_trace();
-	int fds[2];
-	if (pipe(fds) != 0) {
-		swaylogout_log(LOG_ERROR, "Failed to pipe");
-		exit(1);
-	}
-	if (fork() == 0) {
-		setsid();
-		close(fds[0]);
-		int devnull = open("/dev/null", O_RDWR);
-		dup2(STDOUT_FILENO, devnull);
-		dup2(STDERR_FILENO, devnull);
-		close(devnull);
-		uint8_t success = 0;
-		if (chdir("/") != 0) {
-			write(fds[1], &success, 1);
-			exit(1);
-		}
-		return fds[1];
-	} else {
-		close(fds[1]);
-		uint8_t success;
-		if (read(fds[0], &success, 1) != 1 || !success) {
-			swaylogout_log(LOG_ERROR, "Failed to daemonize");
-			exit(1);
-		}
-		close(fds[0]);
-		exit(0);
-	}
-}
-
-static void daemonize_done(void *fdptr) {
-	swaylogout_trace();
-	int *fd = (int *)fdptr;
-	if (*fd < 0) {
-		return;
-	}
-
-	uint8_t success = 1;
-	if (write(*fd, &success, 1) != 1) {
-		swaylogout_log(LOG_ERROR, "Failed to tell parent process that daemonization is done");
-		exit(1);
-	}
-	close(*fd);
-	*fd = -1;
-}
-
-static void destroy_surface(struct swaylogout_surface *surface) {
-	swaylogout_log(LOG_DEBUG, "Destroy surface for output %s", surface->output_name);
+static void destroy_surface(struct waylogout_surface *surface) {
+	waylogout_log(LOG_DEBUG, "Destroy surface for output %s", surface->output_name);
 
 	wl_list_remove(&surface->link);
 	if (surface->layer_surface != NULL) {
@@ -262,10 +213,10 @@ static void destroy_surface(struct swaylogout_surface *surface) {
 
 static const struct zwlr_layer_surface_v1_listener layer_surface_listener;
 
-static cairo_surface_t *select_image(struct swaylogout_state *state,
-		struct swaylogout_surface *surface);
+static cairo_surface_t *select_image(struct waylogout_state *state,
+		struct waylogout_surface *surface);
 
-static bool surface_is_opaque(struct swaylogout_surface *surface) {
+static bool surface_is_opaque(struct waylogout_surface *surface) {
 	if (!fade_is_complete(&surface->fade)) {
 		return false;
 	}
@@ -277,8 +228,8 @@ static bool surface_is_opaque(struct swaylogout_surface *surface) {
 
 struct zxdg_output_v1_listener _xdg_output_listener;
 
-static void create_layer_surface(struct swaylogout_surface *surface) {
-	struct swaylogout_state *state = surface->state;
+static void create_layer_surface(struct waylogout_surface *surface) {
+	struct waylogout_state *state = surface->state;
 
 	if (state->args.fade_in) {
 		surface->fade.target_time = state->args.fade_in;
@@ -294,7 +245,7 @@ static void create_layer_surface(struct swaylogout_surface *surface) {
 				surface->xdg_output, &_xdg_output_listener, surface);
 		surface->events_pending += 1;
 	} else if (!has_printed_zxdg_error) {
-		swaylogout_log(LOG_INFO, "Compositor does not support zxdg output "
+		waylogout_log(LOG_INFO, "Compositor does not support zxdg output "
 				"manager, images assigned to named outputs will not work");
 		has_printed_zxdg_error = true;
 	}
@@ -329,8 +280,8 @@ static void create_layer_surface(struct swaylogout_surface *surface) {
 	wl_surface_commit(surface->surface);
 }
 
-static void initially_render_surface(struct swaylogout_surface *surface) {
-	swaylogout_log(LOG_DEBUG, "Surface for output %s ready", surface->output_name);
+static void initially_render_surface(struct waylogout_surface *surface) {
+	waylogout_log(LOG_DEBUG, "Surface for output %s ready", surface->output_name);
 	if (surface_is_opaque(surface) &&
 			surface->state->args.mode != BACKGROUND_MODE_CENTER &&
 			surface->state->args.mode != BACKGROUND_MODE_FIT) {
@@ -349,8 +300,8 @@ static void initially_render_surface(struct swaylogout_surface *surface) {
 static void layer_surface_configure(void *data,
 		struct zwlr_layer_surface_v1 *layer_surface,
 		uint32_t serial, uint32_t width, uint32_t height) {
-	swaylogout_trace();
-	struct swaylogout_surface *surface = data;
+	waylogout_trace();
+	struct waylogout_surface *surface = data;
 	surface->width = width;
 	surface->height = height;
 	surface->indicator_width = 1;
@@ -364,8 +315,8 @@ static void layer_surface_configure(void *data,
 
 static void layer_surface_closed(void *data,
 		struct zwlr_layer_surface_v1 *layer_surface) {
-	swaylogout_trace();
-	struct swaylogout_surface *surface = data;
+	waylogout_trace();
+	struct waylogout_surface *surface = data;
 	destroy_surface(surface);
 }
 
@@ -378,7 +329,7 @@ static const struct wl_callback_listener surface_frame_listener;
 
 static void surface_frame_handle_done(void *data, struct wl_callback *callback,
 		uint32_t time) {
-	struct swaylogout_surface *surface = data;
+	struct waylogout_surface *surface = data;
 
 	wl_callback_destroy(callback);
 	surface->frame_pending = false;
@@ -403,7 +354,7 @@ static const struct wl_callback_listener surface_frame_listener = {
 	.done = surface_frame_handle_done,
 };
 
-void damage_surface(struct swaylogout_surface *surface) {
+void damage_surface(struct waylogout_surface *surface) {
 	surface->dirty = true;
 	if (surface->frame_pending) {
 		return;
@@ -415,8 +366,8 @@ void damage_surface(struct swaylogout_surface *surface) {
 	wl_surface_commit(surface->surface);
 }
 
-void damage_state(struct swaylogout_state *state) {
-	struct swaylogout_surface *surface;
+void damage_state(struct waylogout_state *state) {
+	struct waylogout_surface *surface;
 	wl_list_for_each(surface, &state->surfaces, link) {
 		damage_surface(surface);
 	}
@@ -426,8 +377,8 @@ static void handle_wl_output_geometry(void *data, struct wl_output *wl_output,
 		int32_t x, int32_t y, int32_t width_mm, int32_t height_mm,
 		int32_t subpixel, const char *make, const char *model,
 		int32_t transform) {
-	swaylogout_trace();
-	struct swaylogout_surface *surface = data;
+	waylogout_trace();
+	struct waylogout_surface *surface = data;
 	surface->subpixel = subpixel;
 	surface->transform = transform;
 	if (surface->state->run_display) {
@@ -446,8 +397,8 @@ static void handle_wl_output_done(void *data, struct wl_output *output) {
 
 static void handle_wl_output_scale(void *data, struct wl_output *output,
 		int32_t factor) {
-	swaylogout_trace();
-	struct swaylogout_surface *surface = data;
+	waylogout_trace();
+	struct waylogout_surface *surface = data;
 	surface->scale = factor;
 	if (surface->state->run_display) {
 		damage_surface(surface);
@@ -465,7 +416,7 @@ static struct wl_buffer *create_shm_buffer(struct wl_shm *shm, enum wl_shm_forma
 		int width, int height, int stride, void **data_out) {
 	int size = stride * height;
 
-	const char shm_name[] = "/swaylogout-shm";
+	const char shm_name[] = "/waylogout-shm";
 	int fd = shm_open(shm_name, O_RDWR | O_CREAT | O_EXCL, S_IRUSR | S_IWUSR);
 	if (fd < 0) {
 		fprintf(stderr, "shm_open failed\n");
@@ -500,17 +451,17 @@ static struct wl_buffer *create_shm_buffer(struct wl_shm *shm, enum wl_shm_forma
 	return buffer;
 }
 
-static cairo_surface_t *apply_effects(cairo_surface_t *image, struct swaylogout_state *state, int scale) {
+static cairo_surface_t *apply_effects(cairo_surface_t *image, struct waylogout_state *state, int scale) {
 	if (state->args.effects_count == 0) {
 		return image;
 	}
 
 	if (state->args.time_effects) {
-		return swaylogout_effects_run_timed(
+		return waylogout_effects_run_timed(
 				image, scale,
 				state->args.effects, state->args.effects_count);
 	} else {
-		return swaylogout_effects_run(
+		return waylogout_effects_run(
 				image, scale,
 				state->args.effects, state->args.effects_count);
 	}
@@ -519,10 +470,10 @@ static cairo_surface_t *apply_effects(cairo_surface_t *image, struct swaylogout_
 static void handle_screencopy_frame_buffer(void *data,
 		struct zwlr_screencopy_frame_v1 *frame, uint32_t format, uint32_t width,
 		uint32_t height, uint32_t stride) {
-	swaylogout_trace();
-	struct swaylogout_surface *surface = data;
+	waylogout_trace();
+	struct waylogout_surface *surface = data;
 
-	struct swaylogout_image *image = calloc(1, sizeof(struct swaylock_image));
+	struct waylogout_image *image = calloc(1, sizeof(struct waylogout_image));
 	image->path = NULL;
 	image->output_name = surface->output_name;
 
@@ -546,8 +497,8 @@ static void handle_screencopy_frame_buffer(void *data,
 
 static void handle_screencopy_frame_flags(void *data,
 		struct zwlr_screencopy_frame_v1 *frame, uint32_t flags) {
-	swaylogout_trace();
-	struct swaylogout_surface *surface = data;
+	waylogout_trace();
+	struct waylogout_surface *surface = data;
 
 	// The transform affecting a screenshot consists of three parts:
 	// Whether it's flipped vertically, whether it's flipped horizontally,
@@ -594,9 +545,9 @@ static void handle_screencopy_frame_flags(void *data,
 static void handle_screencopy_frame_ready(void *data,
 		struct zwlr_screencopy_frame_v1 *frame, uint32_t tv_sec_hi,
 		uint32_t tv_sec_lo, uint32_t tv_nsec) {
-	swaylogout_trace();
-	struct swaylogout_surface *surface = data;
-	struct swaylogout_state *state = surface->state;
+	waylogout_trace();
+	struct waylogout_surface *surface = data;
+	struct waylogout_state *state = surface->state;
 
 	cairo_surface_t *image = load_background_from_buffer(
 			surface->screencopy.data,
@@ -606,14 +557,14 @@ static void handle_screencopy_frame_ready(void *data,
 			surface->screencopy.stride,
 			surface->screencopy.transform);
 	if (image == NULL) {
-		swaylogout_log(LOG_ERROR, "Failed to create image from screenshot");
+		waylogout_log(LOG_ERROR, "Failed to create image from screenshot");
 	} else  {
 		surface->screencopy.image->cairo_surface =
 			apply_effects(image, state, surface->scale);
 		surface->image = surface->screencopy.image->cairo_surface;
 	}
 
-	swaylogout_log(LOG_DEBUG, "Loaded screenshot for output %s", surface->output_name);
+	waylogout_log(LOG_DEBUG, "Loaded screenshot for output %s", surface->output_name);
 	wl_list_insert(&state->images, &surface->screencopy.image->link);
 	if (--surface->events_pending == 0) {
 		initially_render_surface(surface);
@@ -622,9 +573,9 @@ static void handle_screencopy_frame_ready(void *data,
 
 static void handle_screencopy_frame_failed(void *data,
 		struct zwlr_screencopy_frame_v1 *frame) {
-	swaylogout_trace();
-	struct swaylogout_surface *surface = data;
-	swaylogout_log(LOG_ERROR, "Screencopy failed");
+	waylogout_trace();
+	struct waylogout_surface *surface = data;
+	waylogout_log(LOG_ERROR, "Screencopy failed");
 
 	if (--surface->events_pending == 0) {
 		initially_render_surface(surface);
@@ -650,9 +601,9 @@ static void handle_xdg_output_logical_position(void *data,
 
 static void handle_xdg_output_name(void *data, struct zxdg_output_v1 *output,
 		const char *name) {
-	swaylogout_trace();
-	swaylogout_log(LOG_DEBUG, "output name is %s", name);
-	struct swaylogout_surface *surface = data;
+	waylogout_trace();
+	waylogout_log(LOG_DEBUG, "output name is %s", name);
+	struct waylogout_surface *surface = data;
 	surface->xdg_output = output;
 	surface->output_name = strdup(name);
 }
@@ -663,9 +614,9 @@ static void handle_xdg_output_description(void *data, struct zxdg_output_v1 *out
 }
 
 static void handle_xdg_output_done(void *data, struct zxdg_output_v1 *output) {
-	swaylogout_trace();
-	struct swaylogout_surface *surface = data;
-	struct swaylogout_state *state = surface->state;
+	waylogout_trace();
+	struct waylogout_surface *surface = data;
+	struct waylogout_state *state = surface->state;
 	cairo_surface_t *new_image = select_image(surface->state, surface);
 
 	if (new_image == surface->image && state->args.screenshots) {
@@ -677,13 +628,13 @@ static void handle_xdg_output_done(void *data, struct zxdg_output_v1 *output) {
 					&screencopy_frame_listener, surface);
 			surface->events_pending += 1;
 		} else if (!has_printed_screencopy_error) {
-			swaylogout_log(LOG_INFO, "Compositor does not support screencopy manager, "
+			waylogout_log(LOG_INFO, "Compositor does not support screencopy manager, "
 					"screenshots will not work");
 			has_printed_screencopy_error = true;
 		}
 	} else if (new_image != NULL) {
 		if (state->args.screenshots) {
-			swaylogout_log(LOG_DEBUG,
+			waylogout_log(LOG_DEBUG,
 					"Using existing image instead of taking a screenshot for output %s.",
 					surface->output_name);
 		}
@@ -706,7 +657,7 @@ struct zxdg_output_v1_listener _xdg_output_listener = {
 static void handle_global(void *data, struct wl_registry *registry,
 		uint32_t name, const char *interface, uint32_t version) {
 
-	struct swaylogout_state *state = data;
+	struct waylogout_state *state = data;
 	if (strcmp(interface, wl_compositor_interface.name) == 0) {
 		state->compositor = wl_registry_bind(registry, name,
 				&wl_compositor_interface, 3);
@@ -719,10 +670,10 @@ static void handle_global(void *data, struct wl_registry *registry,
 	} else if (strcmp(interface, wl_seat_interface.name) == 0) {
 		struct wl_seat *seat = wl_registry_bind(
 				registry, name, &wl_seat_interface, 4);
-		struct swaylogout_seat *swaylock_seat =
-			calloc(1, sizeof(struct swaylogout_seat));
-		swaylogout_seat->state = state;
-		wl_seat_add_listener(seat, &seat_listener, swaylogout_seat);
+		struct waylogout_seat *waylogout_seat =
+			calloc(1, sizeof(struct waylogout_seat));
+		waylogout_seat->state = state;
+		wl_seat_add_listener(seat, &seat_listener, waylogout_seat);
 	} else if (strcmp(interface, zwlr_layer_shell_v1_interface.name) == 0) {
 		state->layer_shell = wl_registry_bind(
 				registry, name, &zwlr_layer_shell_v1_interface, 1);
@@ -733,8 +684,8 @@ static void handle_global(void *data, struct wl_registry *registry,
 		state->zxdg_output_manager = wl_registry_bind(
 				registry, name, &zxdg_output_manager_v1_interface, 2);
 	} else if (strcmp(interface, wl_output_interface.name) == 0) {
-		struct swaylogout_surface *surface =
-			calloc(1, sizeof(struct swaylogout_surface));
+		struct waylogout_surface *surface =
+			calloc(1, sizeof(struct waylogout_surface));
 		surface->state = state;
 		surface->output = wl_registry_bind(registry, name,
 				&wl_output_interface, 3);
@@ -754,8 +705,8 @@ static void handle_global(void *data, struct wl_registry *registry,
 
 static void handle_global_remove(void *data, struct wl_registry *registry,
 		uint32_t name) {
-	struct swaylogout_state *state = data;
-	struct swaylogout_surface *surface;
+	struct waylogout_state *state = data;
+	struct waylogout_surface *surface;
 	wl_list_for_each(surface, &state->surfaces, link) {
 		if (surface->output_global_name == name) {
 			destroy_surface(surface);
@@ -769,9 +720,9 @@ static const struct wl_registry_listener registry_listener = {
 	.global_remove = handle_global_remove,
 };
 
-static cairo_surface_t *select_image(struct swaylogout_state *state,
-		struct swaylogout_surface *surface) {
-	struct swaylogout_image *image;
+static cairo_surface_t *select_image(struct waylogout_state *state,
+		struct waylogout_surface *surface) {
+	struct waylogout_image *image;
 	cairo_surface_t *default_image = NULL;
 	wl_list_for_each(image, &state->images, link) {
 		if (lenient_strcmp(image->output_name, surface->output_name) == 0) {
@@ -800,9 +751,9 @@ static char *join_args(char **argv, int argc) {
 	return res;
 }
 
-static void load_image(char *arg, struct swaylogout_state *state) {
+static void load_image(char *arg, struct waylogout_state *state) {
 	// [[<output>]:]<path>
-	struct swaylogout_image *image = calloc(1, sizeof(struct swaylock_image));
+	struct waylogout_image *image = calloc(1, sizeof(struct waylogout_image));
 	char *separator = strchr(arg, ':');
 	if (separator) {
 		*separator = '\0';
@@ -813,15 +764,15 @@ static void load_image(char *arg, struct swaylogout_state *state) {
 		image->path = strdup(arg);
 	}
 
-	struct swaylogout_image *iter_image, *temp;
+	struct waylogout_image *iter_image, *temp;
 	wl_list_for_each_safe(iter_image, temp, &state->images, link) {
 		if (lenient_strcmp(iter_image->output_name, image->output_name) == 0) {
 			if (image->output_name) {
-				swaylogout_log(LOG_DEBUG,
+				waylogout_log(LOG_DEBUG,
 						"Replacing image defined for output %s with %s",
 						image->output_name, image->path);
 			} else {
-				swaylogout_log(LOG_DEBUG, "Replacing default image with %s",
+				waylogout_log(LOG_DEBUG, "Replacing default image with %s",
 						image->path);
 			}
 			wl_list_remove(&iter_image->link);
@@ -857,47 +808,33 @@ static void load_image(char *arg, struct swaylogout_state *state) {
 	}
 
 	wl_list_insert(&state->images, &image->link);
-	swaylogout_log(LOG_DEBUG, "Loaded image %s for output %s", image->path,
+	waylogout_log(LOG_DEBUG, "Loaded image %s for output %s", image->path,
 			image->output_name ? image->output_name : "*");
 }
 
-static void set_default_colors(struct swaylogout_colors *colors) {
+// TODO edit/prune these
+static void set_default_colors(struct waylogout_colors *colors) {
 	colors->background = 0xFFFFFFFF;
 	colors->bs_highlight = 0xDB3300FF;
 	colors->key_highlight = 0x33DB00FF;
 	colors->caps_lock_bs_highlight = 0xDB3300FF;
 	colors->caps_lock_key_highlight = 0x33DB00FF;
 	colors->separator = 0x000000FF;
-	colors->layout_background = 0x000000C0;
-	colors->layout_border = 0x00000000;
-	colors->layout_text = 0xFFFFFFFF;
-	colors->inside = (struct swaylogout_colorset){
-		.input = 0x000000C0,
-		.cleared = 0xE5A445C0,
-		.caps_lock = 0x000000C0,
-		.verifying = 0x0072FFC0,
-		.wrong = 0xFA0000C0,
+	colors->inside = (struct waylogout_colorset){
+		.normal = 0x000000C0,
+		.highlight = 0xFA0000C0,
 	};
-	colors->line = (struct swaylogout_colorset){
-		.input = 0x000000FF,
-		.cleared = 0x000000FF,
-		.caps_lock = 0x000000FF,
-		.verifying = 0x000000FF,
-		.wrong = 0x000000FF,
+	colors->line = (struct waylogout_colorset){
+		.normal = 0x000000FF,
+		.highlight = 0x000000FF,
 	};
-	colors->ring = (struct swaylogout_colorset){
-		.input = 0x337D00FF,
-		.cleared = 0xE5A445FF,
-		.caps_lock = 0xE5A445FF,
-		.verifying = 0x3300FFFF,
-		.wrong = 0x7D3300FF,
+	colors->ring = (struct waylogout_colorset){
+		.normal = 0x337D00FF,
+		.highlight = 0x7D3300FF,
 	};
-	colors->text = (struct swaylogout_colorset){
-		.input = 0xE5A445FF,
-		.cleared = 0x000000FF,
-		.caps_lock = 0xE5A445FF,
-		.verifying = 0x000000FF,
-		.wrong = 0x000000FF,
+	colors->text = (struct waylogout_colorset){
+		.normal = 0xE5A445FF,
+		.highlight = 0x000000FF,
 	};
 }
 
@@ -907,7 +844,31 @@ enum line_mode {
 	LM_RING,
 };
 
-static int parse_options(int argc, char **argv, struct swaylogout_state *state,
+static void fill_action(struct waylogout_state *state,
+	enum waylogout_actions action, char *label, char *symbol, char *command,
+	xkb_keysym_t shortcut) {
+	state->actions[action] = (struct waylogout_action){
+		.show = true,
+		.selected = false,
+		.label = strdup(label),
+		.shortcut = shortcut,
+	};
+	strncpy(state->actions[action].symbol, symbol, 4);
+	if (command)
+		state->actions[action].command = strdup(command);
+	waylogout_log(LOG_DEBUG,
+	  "Action %s:  \n"
+	  "  symbol  %s\n"
+	  "  command %s  "
+	  ,
+	  state->actions[action].label,
+	  state->actions[action].symbol,
+	  state->actions[action].command
+	);
+}
+
+// TODO lots of editting/pruning to do here
+static int parse_options(int argc, char **argv, struct waylogout_state *state,
 		enum line_mode *line_mode, char **config_path) {
 	enum long_option_codes {
 		LO_TRACE,
@@ -916,36 +877,23 @@ static int parse_options(int argc, char **argv, struct swaylogout_state *state,
 		LO_CAPS_LOCK_KEY_HL_COLOR,
 		LO_FONT,
 		LO_FONT_SIZE,
-		LO_IND_IDLE_VISIBLE,
 		LO_IND_RADIUS,
 		LO_IND_X_POSITION,
 		LO_IND_Y_POSITION,
 		LO_IND_THICKNESS,
 		LO_INSIDE_COLOR,
-		LO_INSIDE_CLEAR_COLOR,
-		LO_INSIDE_CAPS_LOCK_COLOR,
-		LO_INSIDE_VER_COLOR,
-		LO_INSIDE_WRONG_COLOR,
+		LO_INSIDE_HIGHLIGHT_COLOR,
 		LO_KEY_HL_COLOR,
 		LO_LAYOUT_TXT_COLOR,
 		LO_LAYOUT_BG_COLOR,
 		LO_LAYOUT_BORDER_COLOR,
 		LO_LINE_COLOR,
-		LO_LINE_CLEAR_COLOR,
-		LO_LINE_CAPS_LOCK_COLOR,
-		LO_LINE_VER_COLOR,
-		LO_LINE_WRONG_COLOR,
+		LO_LINE_HIGHLIGHT_COLOR,
 		LO_RING_COLOR,
-		LO_RING_CLEAR_COLOR,
-		LO_RING_CAPS_LOCK_COLOR,
-		LO_RING_VER_COLOR,
-		LO_RING_WRONG_COLOR,
+		LO_RING_HIGHLIGHT_COLOR,
 		LO_SEP_COLOR,
 		LO_TEXT_COLOR,
-		LO_TEXT_CLEAR_COLOR,
-		LO_TEXT_CAPS_LOCK_COLOR,
-		LO_TEXT_VER_COLOR,
-		LO_TEXT_WRONG_COLOR,
+		LO_TEXT_HIGHLIGHT_COLOR,
 		LO_EFFECT_BLUR,
 		LO_EFFECT_PIXELATE,
 		LO_EFFECT_SCALE,
@@ -954,17 +902,16 @@ static int parse_options(int argc, char **argv, struct swaylogout_state *state,
 		LO_EFFECT_COMPOSE,
 		LO_EFFECT_CUSTOM,
 		LO_TIME_EFFECTS,
-		LO_INDICATOR,
-		LO_CLOCK,
-		LO_TIMESTR,
-		LO_DATESTR,
-		LO_LOCK_SYMBOL,
-		LO_USER,
 		LO_FADE_IN,
-		LO_SUBMIT_ON_TOUCH,
-		LO_GRACE,
-		LO_GRACE_NO_MOUSE,
-		LO_GRACE_NO_TOUCH,
+		LO_LABELS,
+		LO_HIDE_CANCEL,
+		LO_COMMAND_POWEROFF,
+		LO_COMMAND_REBOOT,
+		LO_COMMAND_SUSPEND,
+		LO_COMMAND_HIBERNATE,
+		LO_COMMAND_LOGOUT,
+		LO_COMMAND_LOCK,
+		LO_COMMAND_SWITCH,
 	};
 
 	static struct option long_options[] = {
@@ -972,57 +919,37 @@ static int parse_options(int argc, char **argv, struct swaylogout_state *state,
 		{"color", required_argument, NULL, 'c'},
 		{"debug", no_argument, NULL, 'd'},
 		{"trace", no_argument, NULL, LO_TRACE},
-		{"ignore-empty-password", no_argument, NULL, 'e'},
-		{"daemonize", no_argument, NULL, 'f'},
 		{"help", no_argument, NULL, 'h'},
 		{"image", required_argument, NULL, 'i'},
-		{"screenshots", no_argument, NULL, 'S'},
-		{"disable-caps-lock-text", no_argument, NULL, 'L'},
-		{"indicator-caps-lock", no_argument, NULL, 'l'},
+		{"labels", no_argument, NULL, 'l'},
 		{"line-uses-inside", no_argument, NULL, 'n'},
 		{"line-uses-ring", no_argument, NULL, 'r'},
+		{"screenshots", no_argument, NULL, 'S'},
 		{"scaling", required_argument, NULL, 's'},
 		{"tiling", no_argument, NULL, 't'},
-		{"no-unlock-indicator", no_argument, NULL, 'u'},
-		{"show-keyboard-layout", no_argument, NULL, 'k'},
-		{"hide-keyboard-layout", no_argument, NULL, 'K'},
-		{"show-failed-attempts", no_argument, NULL, 'F'},
 		{"version", no_argument, NULL, 'v'},
 		{"bs-hl-color", required_argument, NULL, LO_BS_HL_COLOR},
 		{"caps-lock-bs-hl-color", required_argument, NULL, LO_CAPS_LOCK_BS_HL_COLOR},
 		{"caps-lock-key-hl-color", required_argument, NULL, LO_CAPS_LOCK_KEY_HL_COLOR},
 		{"font", required_argument, NULL, LO_FONT},
 		{"font-size", required_argument, NULL, LO_FONT_SIZE},
-		{"indicator-idle-visible", no_argument, NULL, LO_IND_IDLE_VISIBLE},
 		{"indicator-radius", required_argument, NULL, LO_IND_RADIUS},
 		{"indicator-thickness", required_argument, NULL, LO_IND_THICKNESS},
 		{"indicator-x-position", required_argument, NULL, LO_IND_X_POSITION},
 		{"indicator-y-position", required_argument, NULL, LO_IND_Y_POSITION},
 		{"inside-color", required_argument, NULL, LO_INSIDE_COLOR},
-		{"inside-clear-color", required_argument, NULL, LO_INSIDE_CLEAR_COLOR},
-		{"inside-caps-lock-color", required_argument, NULL, LO_INSIDE_CAPS_LOCK_COLOR},
-		{"inside-ver-color", required_argument, NULL, LO_INSIDE_VER_COLOR},
-		{"inside-wrong-color", required_argument, NULL, LO_INSIDE_WRONG_COLOR},
+		{"inside-highlight-color", required_argument, NULL, LO_INSIDE_HIGHLIGHT_COLOR},
 		{"key-hl-color", required_argument, NULL, LO_KEY_HL_COLOR},
 		{"layout-bg-color", required_argument, NULL, LO_LAYOUT_BG_COLOR},
 		{"layout-border-color", required_argument, NULL, LO_LAYOUT_BORDER_COLOR},
 		{"layout-text-color", required_argument, NULL, LO_LAYOUT_TXT_COLOR},
 		{"line-color", required_argument, NULL, LO_LINE_COLOR},
-		{"line-clear-color", required_argument, NULL, LO_LINE_CLEAR_COLOR},
-		{"line-caps-lock-color", required_argument, NULL, LO_LINE_CAPS_LOCK_COLOR},
-		{"line-ver-color", required_argument, NULL, LO_LINE_VER_COLOR},
-		{"line-wrong-color", required_argument, NULL, LO_LINE_WRONG_COLOR},
+		{"line-highlight-color", required_argument, NULL, LO_LINE_HIGHLIGHT_COLOR},
 		{"ring-color", required_argument, NULL, LO_RING_COLOR},
-		{"ring-clear-color", required_argument, NULL, LO_RING_CLEAR_COLOR},
-		{"ring-caps-lock-color", required_argument, NULL, LO_RING_CAPS_LOCK_COLOR},
-		{"ring-ver-color", required_argument, NULL, LO_RING_VER_COLOR},
-		{"ring-wrong-color", required_argument, NULL, LO_RING_WRONG_COLOR},
+		{"ring-highlight-color", required_argument, NULL, LO_RING_HIGHLIGHT_COLOR},
 		{"separator-color", required_argument, NULL, LO_SEP_COLOR},
 		{"text-color", required_argument, NULL, LO_TEXT_COLOR},
-		{"text-clear-color", required_argument, NULL, LO_TEXT_CLEAR_COLOR},
-		{"text-caps-lock-color", required_argument, NULL, LO_TEXT_CAPS_LOCK_COLOR},
-		{"text-ver-color", required_argument, NULL, LO_TEXT_VER_COLOR},
-		{"text-wrong-color", required_argument, NULL, LO_TEXT_WRONG_COLOR},
+		{"text-highlight-color", required_argument, NULL, LO_TEXT_HIGHLIGHT_COLOR},
 		{"effect-blur", required_argument, NULL, LO_EFFECT_BLUR},
 		{"effect-pixelate", required_argument, NULL, LO_EFFECT_PIXELATE},
 		{"effect-scale", required_argument, NULL, LO_EFFECT_SCALE},
@@ -1031,22 +958,20 @@ static int parse_options(int argc, char **argv, struct swaylogout_state *state,
 		{"effect-compose", required_argument, NULL, LO_EFFECT_COMPOSE},
 		{"effect-custom", required_argument, NULL, LO_EFFECT_CUSTOM},
 		{"time-effects", no_argument, NULL, LO_TIME_EFFECTS},
-		{"indicator", no_argument, NULL, LO_INDICATOR},
-		{"clock", no_argument, NULL, LO_CLOCK},
-		{"timestr", required_argument, NULL, LO_TIMESTR},
-		{"datestr", required_argument, NULL, LO_DATESTR},
-		{"lock-symbol", no_argument, NULL, LO_LOCK_SYMBOL},
-		{"user", no_argument, NULL, LO_USER},
 		{"fade-in", required_argument, NULL, LO_FADE_IN},
-		{"submit-on-touch", no_argument, NULL, LO_SUBMIT_ON_TOUCH},
-		{"grace", required_argument, NULL, LO_GRACE},
-		{"grace-no-mouse", no_argument, NULL, LO_GRACE_NO_MOUSE},
-		{"grace-no-touch", no_argument, NULL, LO_GRACE_NO_TOUCH},
+		{"poweroff-command", required_argument, NULL, LO_COMMAND_POWEROFF},
+		{"reboot-command", required_argument, NULL, LO_COMMAND_REBOOT},
+		{"suspend-command", required_argument, NULL, LO_COMMAND_SUSPEND},
+		{"hibernate-command", required_argument, NULL, LO_COMMAND_HIBERNATE},
+		{"logout-command", required_argument, NULL, LO_COMMAND_LOGOUT},
+		{"lock-command", required_argument, NULL, LO_COMMAND_LOCK},
+		{"switch-user-command", required_argument, NULL, LO_COMMAND_SWITCH},
+		{"hide-cancel", no_argument, NULL, LO_HIDE_CANCEL},
 		{0, 0, 0, 0}
 	};
 
 	const char usage[] =
-		"Usage: swaylogout [options...]\n"
+		"Usage: waylogout [options...]\n"
 		"\n"
 		"  -C, --config <config_file>       "
 			"Path to the config file.\n"
@@ -1056,12 +981,6 @@ static int parse_options(int argc, char **argv, struct swaylogout_state *state,
 			"Enable debugging output.\n"
 		"  -t, --trace                      "
 			"Enable tracing output.\n"
-		"  -e, --ignore-empty-password      "
-			"When an empty password is provided, do not validate it.\n"
-		"  -F, --show-failed-attempts       "
-			"Show current count of failed authentication attempts.\n"
-		"  -f, --daemonize                  "
-			"Detach from the controlling terminal after locking.\n"
 		"  --fade-in <seconds>              "
 			"Make the lock screen fade in instead of just popping in.\n"
 		"  --submit-on-touch                "
@@ -1076,32 +995,14 @@ static int parse_options(int argc, char **argv, struct swaylogout_state *state,
 			"Show help message and quit.\n"
 		"  -i, --image [[<output>]:]<path>  "
 			"Display the given image, optionally only on the given output.\n"
+		"  -l, --labels                     "
+			"Show action labels.\n"
 		"  -S, --screenshots                "
 			"Use a screenshots as the background image.\n"
-		"  -k, --show-keyboard-layout       "
-			"Display the current xkb layout while typing.\n"
-		"  -K, --hide-keyboard-layout       "
-			"Hide the current xkb layout while typing.\n"
-		"  -L, --disable-caps-lock-text     "
-			"Disable the Caps Lock text.\n"
-		"  -l, --indicator-caps-lock        "
-			"Show the current Caps Lock state also on the indicator.\n"
 		"  -s, --scaling <mode>             "
 			"Image scaling mode: stretch, fill, fit, center, tile, solid_color.\n"
 		"  -t, --tiling                     "
 			"Same as --scaling=tile.\n"
-		"  -u, --no-unlock-indicator        "
-			"Disable the unlock indicator.\n"
-		"  --indicator                      "
-			"Always show the indicator.\n"
-		"  --clock                          "
-			"Show time and date.\n"
-		"  --timestr <format>               "
-			"The format string for the time. Defaults to '%T'.\n"
-		"  --datestr <format>               "
-			"The format string for the date. Defaults to '%a, %x'.\n"
-		"  --lock-symbol                    "
-			"Show a lock symbol. (Requires Font Awesome 5 Free.)\n"
 		"  --user                           "
 			"Show name of locked user.\n"
 		"  -v, --version                    "
@@ -1118,8 +1019,8 @@ static int parse_options(int argc, char **argv, struct swaylogout_state *state,
 			"Sets the font of the text.\n"
 		"  --font-size <size>               "
 			"Sets a fixed font size for the indicator text.\n"
-		"  --indicator-idle-visible         "
-			"Sets the indicator to show even if idle.\n"
+		"  --hide-cancel                    "
+			"Hide the indicator for the \"cancel\" option.\n"
 		"  --indicator-radius <radius>      "
 			"Sets the indicator radius.\n"
 		"  --indicator-thickness <thick>    "
@@ -1130,14 +1031,7 @@ static int parse_options(int argc, char **argv, struct swaylogout_state *state,
 			"Sets the vertical position of the indicator.\n"
 		"  --inside-color <color>           "
 			"Sets the color of the inside of the indicator.\n"
-		"  --inside-clear-color <color>     "
-			"Sets the color of the inside of the indicator when cleared.\n"
-		"  --inside-caps-lock-color <color> "
-			"Sets the color of the inside of the indicator when Caps Lock "
-			"is active.\n"
-		"  --inside-ver-color <color>       "
-			"Sets the color of the inside of the indicator when verifying.\n"
-		"  --inside-wrong-color <color>     "
+		"  --inside-highlight-color <color>     "
 			"Sets the color of the inside of the indicator when invalid.\n"
 		"  --key-hl-color <color>           "
 			"Sets the color of the key press highlight segments.\n"
@@ -1209,7 +1103,7 @@ static int parse_options(int argc, char **argv, struct swaylogout_state *state,
 	optind = 1;
 	while (1) {
 		int opt_idx = 0;
-		c = getopt_long(argc, argv, "c:deFfhi:SkKLlnrs:tuvC:", long_options,
+		c = getopt_long(argc, argv, "c:dhi:lnrSs:tvC:", long_options,
 				&opt_idx);
 		if (c == -1) {
 			break;
@@ -1226,54 +1120,24 @@ static int parse_options(int argc, char **argv, struct swaylogout_state *state,
 			}
 			break;
 		case 'd':
-			swaylogout_log_init(LOG_DEBUG);
+			waylogout_log_init(LOG_DEBUG);
 			break;
 		case LO_TRACE:
-			swaylogout_log_init(LOG_TRACE);
-			break;
-		case 'e':
-			if (state) {
-				state->args.ignore_empty = true;
-			}
-			break;
-		case 'F':
-			if (state) {
-				state->args.show_failed_attempts = true;
-			}
-			break;
-		case 'f':
-			if (state) {
-				state->args.daemonize = true;
-			}
+			waylogout_log_init(LOG_TRACE);
 			break;
 		case 'i':
 			if (state) {
 				load_image(optarg, state);
 			}
 			break;
+		case 'l':
+			if (state) {
+				state->args.labels = true;
+			}
+			break;
 		case 'S':
 			if (state) {
 				state->args.screenshots = true;
-			}
-			break;
-		case 'k':
-			if (state) {
-				state->args.show_keyboard_layout = true;
-			}
-			break;
-		case 'K':
-			if (state) {
-				state->args.hide_keyboard_layout = true;
-			}
-			break;
-		case 'L':
-			if (state) {
-				state->args.show_caps_lock_text = false;
-			}
-			break;
-		case 'l':
-			if (state) {
-				state->args.show_caps_lock_indicator = true;
 			}
 			break;
 		case 'n':
@@ -1299,13 +1163,8 @@ static int parse_options(int argc, char **argv, struct swaylogout_state *state,
 				state->args.mode = BACKGROUND_MODE_TILE;
 			}
 			break;
-		case 'u':
-			if (state) {
-				state->args.show_indicator = false;
-			}
-			break;
 		case 'v':
-			fprintf(stdout, "swaylogout version " SWAYLOGOUT_VERSION "\n");
+			fprintf(stdout, "waylogout version " WAYLOGOUT_VERSION "\n");
 			exit(EXIT_SUCCESS);
 			break;
 		case LO_BS_HL_COLOR:
@@ -1334,11 +1193,6 @@ static int parse_options(int argc, char **argv, struct swaylogout_state *state,
 				state->args.font_size = atoi(optarg);
 			}
 			break;
-		case LO_IND_IDLE_VISIBLE:
-			if (state) {
-				state->args.indicator_idle_visible = true;
-			}
-			break;
 		case LO_IND_RADIUS:
 			if (state) {
 				state->args.radius = strtol(optarg, NULL, 0);
@@ -1363,27 +1217,12 @@ static int parse_options(int argc, char **argv, struct swaylogout_state *state,
 			break;
 		case LO_INSIDE_COLOR:
 			if (state) {
-				state->args.colors.inside.input = parse_color(optarg);
+				state->args.colors.inside.normal = parse_color(optarg);
 			}
 			break;
-		case LO_INSIDE_CLEAR_COLOR:
+		case LO_INSIDE_HIGHLIGHT_COLOR:
 			if (state) {
-				state->args.colors.inside.cleared = parse_color(optarg);
-			}
-			break;
-		case LO_INSIDE_CAPS_LOCK_COLOR:
-			if (state) {
-				state->args.colors.inside.caps_lock = parse_color(optarg);
-			}
-			break;
-		case LO_INSIDE_VER_COLOR:
-			if (state) {
-				state->args.colors.inside.verifying = parse_color(optarg);
-			}
-			break;
-		case LO_INSIDE_WRONG_COLOR:
-			if (state) {
-				state->args.colors.inside.wrong = parse_color(optarg);
+				state->args.colors.inside.highlight = parse_color(optarg);
 			}
 			break;
 		case LO_KEY_HL_COLOR:
@@ -1408,52 +1247,22 @@ static int parse_options(int argc, char **argv, struct swaylogout_state *state,
 			break;
 		case LO_LINE_COLOR:
 			if (state) {
-				state->args.colors.line.input = parse_color(optarg);
+				state->args.colors.line.normal = parse_color(optarg);
 			}
 			break;
-		case LO_LINE_CLEAR_COLOR:
+		case LO_LINE_HIGHLIGHT_COLOR:
 			if (state) {
-				state->args.colors.line.cleared = parse_color(optarg);
-			}
-			break;
-		case LO_LINE_CAPS_LOCK_COLOR:
-			if (state) {
-				state->args.colors.line.caps_lock = parse_color(optarg);
-			}
-			break;
-		case LO_LINE_VER_COLOR:
-			if (state) {
-				state->args.colors.line.verifying = parse_color(optarg);
-			}
-			break;
-		case LO_LINE_WRONG_COLOR:
-			if (state) {
-				state->args.colors.line.wrong = parse_color(optarg);
+				state->args.colors.line.highlight = parse_color(optarg);
 			}
 			break;
 		case LO_RING_COLOR:
 			if (state) {
-				state->args.colors.ring.input = parse_color(optarg);
+				state->args.colors.ring.normal = parse_color(optarg);
 			}
 			break;
-		case LO_RING_CLEAR_COLOR:
+		case LO_RING_HIGHLIGHT_COLOR:
 			if (state) {
-				state->args.colors.ring.cleared = parse_color(optarg);
-			}
-			break;
-		case LO_RING_CAPS_LOCK_COLOR:
-			if (state) {
-				state->args.colors.ring.caps_lock = parse_color(optarg);
-			}
-			break;
-		case LO_RING_VER_COLOR:
-			if (state) {
-				state->args.colors.ring.verifying = parse_color(optarg);
-			}
-			break;
-		case LO_RING_WRONG_COLOR:
-			if (state) {
-				state->args.colors.ring.wrong = parse_color(optarg);
+				state->args.colors.ring.highlight = parse_color(optarg);
 			}
 			break;
 		case LO_SEP_COLOR:
@@ -1463,37 +1272,22 @@ static int parse_options(int argc, char **argv, struct swaylogout_state *state,
 			break;
 		case LO_TEXT_COLOR:
 			if (state) {
-				state->args.colors.text.input = parse_color(optarg);
+				state->args.colors.text.normal = parse_color(optarg);
 			}
 			break;
-		case LO_TEXT_CLEAR_COLOR:
+		case LO_TEXT_HIGHLIGHT_COLOR:
 			if (state) {
-				state->args.colors.text.cleared = parse_color(optarg);
-			}
-			break;
-		case LO_TEXT_CAPS_LOCK_COLOR:
-			if (state) {
-				state->args.colors.text.caps_lock = parse_color(optarg);
-			}
-			break;
-		case LO_TEXT_VER_COLOR:
-			if (state) {
-				state->args.colors.text.verifying = parse_color(optarg);
-			}
-			break;
-		case LO_TEXT_WRONG_COLOR:
-			if (state) {
-				state->args.colors.text.wrong = parse_color(optarg);
+				state->args.colors.text.highlight = parse_color(optarg);
 			}
 			break;
 		case LO_EFFECT_BLUR:
 			if (state) {
 				state->args.effects = realloc(state->args.effects,
 						sizeof(*state->args.effects) * ++state->args.effects_count);
-				struct swaylogout_effect *effect = &state->args.effects[state->args.effects_count - 1];
+				struct waylogout_effect *effect = &state->args.effects[state->args.effects_count - 1];
 				effect->tag = EFFECT_BLUR;
 				if (sscanf(optarg, "%dx%d", &effect->e.blur.radius, &effect->e.blur.times) != 2) {
-					swaylogout_log(LOG_ERROR, "Invalid blur effect argument %s, ignoring", optarg);
+					waylogout_log(LOG_ERROR, "Invalid blur effect argument %s, ignoring", optarg);
 					state->args.effects_count -= 1;
 				}
 			}
@@ -1502,7 +1296,7 @@ static int parse_options(int argc, char **argv, struct swaylogout_state *state,
 			if (state) {
 				state->args.effects = realloc(state->args.effects,
 						sizeof(*state->args.effects) * ++state->args.effects_count);
-				struct swaylogout_effect *effect = &state->args.effects[state->args.effects_count - 1];
+				struct waylogout_effect *effect = &state->args.effects[state->args.effects_count - 1];
 				effect->tag = EFFECT_PIXELATE;
 				effect->e.pixelate.factor = atoi(optarg);
 			}
@@ -1511,10 +1305,10 @@ static int parse_options(int argc, char **argv, struct swaylogout_state *state,
 			if (state) {
 				state->args.effects = realloc(state->args.effects,
 						sizeof(*state->args.effects) * ++state->args.effects_count);
-				struct swaylogout_effect *effect = &state->args.effects[state->args.effects_count - 1];
+				struct waylogout_effect *effect = &state->args.effects[state->args.effects_count - 1];
 				effect->tag = EFFECT_SCALE;
 				if (sscanf(optarg, "%lf", &effect->e.scale) != 1) {
-					swaylogout_log(LOG_ERROR, "Invalid scale effect argument %s, ignoring", optarg);
+					waylogout_log(LOG_ERROR, "Invalid scale effect argument %s, ignoring", optarg);
 					state->args.effects_count -= 1;
 				}
 			}
@@ -1523,7 +1317,7 @@ static int parse_options(int argc, char **argv, struct swaylogout_state *state,
 			if (state) {
 				state->args.effects = realloc(state->args.effects,
 						sizeof(*state->args.effects) * ++state->args.effects_count);
-				struct swaylogout_effect *effect = &state->args.effects[state->args.effects_count - 1];
+				struct waylogout_effect *effect = &state->args.effects[state->args.effects_count - 1];
 				effect->tag = EFFECT_GREYSCALE;
 			}
 			break;
@@ -1531,10 +1325,10 @@ static int parse_options(int argc, char **argv, struct swaylogout_state *state,
 			if (state) {
 				state->args.effects = realloc(state->args.effects,
 						sizeof(*state->args.effects) * ++state->args.effects_count);
-				struct swaylogout_effect *effect = &state->args.effects[state->args.effects_count - 1];
+				struct waylogout_effect *effect = &state->args.effects[state->args.effects_count - 1];
 				effect->tag = EFFECT_VIGNETTE;
 				if (sscanf(optarg, "%lf:%lf", &effect->e.vignette.base, &effect->e.vignette.factor) != 2) {
-					swaylogout_log(LOG_ERROR, "Invalid factor effect argument %s, ignoring", optarg);
+					waylogout_log(LOG_ERROR, "Invalid factor effect argument %s, ignoring", optarg);
 					state->args.effects_count -= 1;
 				}
 			}
@@ -1543,7 +1337,7 @@ static int parse_options(int argc, char **argv, struct swaylogout_state *state,
 			if (state) {
 				state->args.effects = realloc(state->args.effects,
 						sizeof(*state->args.effects) * ++state->args.effects_count);
-				struct swaylogout_effect *effect = &state->args.effects[state->args.effects_count - 1];
+				struct waylogout_effect *effect = &state->args.effects[state->args.effects_count - 1];
 				effect->tag = EFFECT_COMPOSE;
 				parse_effect_compose(optarg, effect);
 			}
@@ -1552,7 +1346,7 @@ static int parse_options(int argc, char **argv, struct swaylogout_state *state,
 			if (state) {
 				state->args.effects = realloc(state->args.effects,
 						sizeof(*state->args.effects) * ++state->args.effects_count);
-				struct swaylogout_effect *effect = &state->args.effects[state->args.effects_count - 1];
+				struct waylogout_effect *effect = &state->args.effects[state->args.effects_count - 1];
 				effect->tag = EFFECT_CUSTOM;
 				effect->e.custom = strdup(optarg);
 			}
@@ -1562,62 +1356,91 @@ static int parse_options(int argc, char **argv, struct swaylogout_state *state,
 				state->args.time_effects = true;
 			}
 			break;
-		case LO_INDICATOR:
-			if (state) {
-				state->args.indicator = true;
-			}
-			break;
-		case LO_CLOCK:
-			if (state) {
-				state->args.clock = true;
-			}
-			break;
-		case LO_TIMESTR:
-			if (state) {
-				free(state->args.timestr);
-				state->args.timestr = strdup(optarg);
-			}
-			break;
-		case LO_DATESTR:
-			if (state) {
-				free(state->args.datestr);
-				state->args.datestr = strdup(optarg);
-			}
-			break;
-		case LO_LOCK_SYMBOL:
-			if (state) {
-				state->args.lock_symbol = true;
-			}
-			break;
-		case LO_USER:
-			if (state) {
-				state->args.user = true;
-			}
-			break;
 		case LO_FADE_IN:
 			if (state) {
 				state->args.fade_in = parse_seconds(optarg);
 			}
 			break;
-		case LO_SUBMIT_ON_TOUCH:
+		case LO_COMMAND_POWEROFF:
 			if (state) {
-				state->args.password_submit_on_touch = true;
+				fill_action(
+					state, ACTION_POWEROFF, "power off",
+					"",
+					optarg,
+					XKB_KEY_p
+				);
+				++(state->n_actions);
 			}
 			break;
-		case LO_GRACE:
+		case LO_COMMAND_REBOOT:
 			if (state) {
-				state->args.password_grace_period = parse_seconds(optarg);
+				fill_action(
+					state, ACTION_REBOOT, "reboot",
+					"",
+					optarg,
+					XKB_KEY_r
+				);
+				++(state->n_actions);
 			}
 			break;
-		case LO_GRACE_NO_MOUSE:
+		case LO_COMMAND_SUSPEND:
 			if (state) {
-				state->args.password_grace_no_mouse = true;
+				fill_action(
+					state, ACTION_SUSPEND, "sleep",
+					"",
+					optarg,
+					XKB_KEY_s
+				);
+				++(state->n_actions);
 			}
 			break;
-		case LO_GRACE_NO_TOUCH:
+		case LO_COMMAND_HIBERNATE:
 			if (state) {
-				state->args.password_grace_no_touch = true;
+				fill_action(
+					state, ACTION_HIBERNATE, "hibernate",
+					"",
+					optarg,
+					XKB_KEY_h
+				);
+				++(state->n_actions);
 			}
+			break;
+		case LO_COMMAND_LOGOUT:
+			if (state) {
+				fill_action(
+					state, ACTION_HIBERNATE, "logout",
+					"",
+					optarg,
+					XKB_KEY_x
+				);
+				++(state->n_actions);
+			}
+			break;
+		case LO_COMMAND_LOCK:
+			if (state) {
+				fill_action(
+					state, ACTION_HIBERNATE, "lock",
+					"",
+					optarg,
+					XKB_KEY_k
+				);
+				++(state->n_actions);
+			}
+			break;
+		case LO_COMMAND_SWITCH:
+			if (state) {
+				fill_action(
+					state, ACTION_HIBERNATE, "switch user",
+					"",
+					optarg,
+					XKB_KEY_w
+				);
+				++(state->n_actions);
+			}
+			break;
+		case LO_HIDE_CANCEL:
+			if (state)
+				state->args.hide_cancel = true;
 			break;
 		default:
 			fprintf(stderr, "%s", usage);
@@ -1634,14 +1457,14 @@ static bool file_exists(const char *path) {
 
 static char *get_config_path(void) {
 	static const char *config_paths[] = {
-		"$HOME/.swaylogout/config",
-		"$XDG_CONFIG_HOME/swaylogout/config",
-		SYSCONFDIR "/swaylogout/config",
+		"$HOME/.waylogout/config",
+		"$XDG_CONFIG_HOME/waylogout/config",
+		SYSCONFDIR "/waylogout/config",
 	};
 
 	char *config_home = getenv("XDG_CONFIG_HOME");
 	if (!config_home || config_home[0] == '\0') {
-		config_paths[1] = "$HOME/.config/swaylogout/config";
+		config_paths[1] = "$HOME/.config/waylogout/config";
 	}
 
 	wordexp_t p;
@@ -1660,11 +1483,11 @@ static char *get_config_path(void) {
 	return NULL;
 }
 
-static int load_config(char *path, struct swaylogout_state *state,
+static int load_config(char *path, struct waylogout_state *state,
 		enum line_mode *line_mode) {
 	FILE *config = fopen(path, "r");
 	if (!config) {
-		swaylogout_log(LOG_ERROR, "Failed to read config. Running without it.");
+		waylogout_log(LOG_ERROR, "Failed to read config. Running without it.");
 		return 0;
 	}
 	char *line = NULL;
@@ -1683,16 +1506,16 @@ static int load_config(char *path, struct swaylogout_state *state,
 			continue;
 		}
 
-		swaylogout_log(LOG_DEBUG, "Config Line #%d: %s", line_number, line);
+		waylogout_log(LOG_DEBUG, "Config Line #%d: %s", line_number, line);
 		char *flag = malloc(nread + 3);
 		if (flag == NULL) {
 			free(line);
 			free(config);
-			swaylogout_log(LOG_ERROR, "Failed to allocate memory");
+			waylogout_log(LOG_ERROR, "Failed to allocate memory");
 			return 0;
 		}
 		sprintf(flag, "--%s", line);
-		char *argv[] = {"swaylogout", flag};
+		char *argv[] = {"waylogout", flag};
 		result = parse_options(2, argv, state, line_mode, NULL);
 		free(flag);
 		if (result != 0) {
@@ -1704,7 +1527,7 @@ static int load_config(char *path, struct swaylogout_state *state,
 	return 0;
 }
 
-static struct swaylogout_state state;
+static struct waylogout_state state;
 
 static void display_in(int fd, short mask, void *data) {
 	if (wl_display_dispatch(state.display) == -1) {
@@ -1712,48 +1535,17 @@ static void display_in(int fd, short mask, void *data) {
 	}
 }
 
-static void end_grace_period(void *data) {
-	struct swaylogout_state *state = data;
-	if (state->auth_state == AUTH_STATE_GRACE) {
-		state->auth_state = AUTH_STATE_IDLE;
-	}
-}
-
-static void comm_in(int fd, short mask, void *data) {
-	if (read_comm_reply()) {
-		// Authentication succeeded
-		state.run_display = false;
-	} else {
-		state.auth_state = AUTH_STATE_INVALID;
-		schedule_indicator_clear(&state);
-		++state.failed_attempts;
-		damage_state(&state);
-	}
-}
-
 static void timer_render(void *data) {
-	struct swaylogout_state *state = (struct swaylock_state *)data;
+	struct waylogout_state *state = (struct waylogout_state *)data;
 	damage_state(state);
 	loop_add_timer(state->eventloop, 1000, timer_render, state);
 }
 
-static void get_username(char **ustr) {
-	uid_t uid = geteuid();
-	struct passwd *pw = getpwuid(uid);
-	if (pw)
-		*ustr = pw->pw_name;
-	else
-		*ustr = NULL;
-}
-
 int main(int argc, char **argv) {
-	swaylogout_log_init(LOG_ERROR);
-	initialize_pw_backend(argc, argv);
+	waylogout_log_init(LOG_ERROR);
 	srand(time(NULL));
 	enum line_mode line_mode = LM_LINE;
-	state.failed_attempts = 0;
-	state.indicator_dirty = false;
-	state.args = (struct swaylogout_args){
+	state.args = (struct waylogout_args){
 		.mode = BACKGROUND_MODE_FILL,
 		.font = strdup("sans-serif"),
 		.font_size = 0,
@@ -1763,26 +1555,20 @@ int main(int argc, char **argv) {
 		.indicator_y_position = 0,
 		.override_indicator_x_position = false,
 		.override_indicator_y_position = false,
-		.ignore_empty = false,
-		.show_indicator = true,
-		.show_caps_lock_indicator = false,
-		.show_caps_lock_text = true,
-		.show_keyboard_layout = false,
-		.hide_keyboard_layout = false,
-		.show_failed_attempts = false,
-		.indicator_idle_visible = false,
-
+		.labels = false,
+		.hide_cancel = false,
 		.screenshots = false,
 		.effects = NULL,
 		.effects_count = 0,
-		.indicator = false,
-		.clock = false,
-		.timestr = strdup("%T"),
-		.datestr = strdup("%a, %x"),
-		.lock_symbol = false,
 		.user = false,
-		.password_grace_period = 0,
 	};
+	state.selected_action = -1;
+	state.n_actions = 0;
+	for (int i = 0; i < N_WAYLOGOUT_ACTIONS; i++) {
+		state.actions[i].show = false;
+		state.actions[i].selected = false;
+	}
+
 	wl_list_init(&state.images);
 	set_default_colors(&state.args.colors);
 
@@ -1797,7 +1583,7 @@ int main(int argc, char **argv) {
 	}
 
 	if (config_path) {
-		swaylogout_log(LOG_DEBUG, "Found config at %s", config_path);
+		waylogout_log(LOG_DEBUG, "Found config at %s", config_path);
 		int config_status = load_config(config_path, &state, &line_mode);
 		free(config_path);
 		if (config_status != 0) {
@@ -1807,7 +1593,7 @@ int main(int argc, char **argv) {
 	}
 
 	if (argc > 1) {
-		swaylogout_log(LOG_DEBUG, "Parsing CLI Args");
+		waylogout_log(LOG_DEBUG, "Parsing CLI Args");
 		int result = parse_options(argc, argv, &state, &line_mode, NULL);
 		if (result != 0) {
 			free(state.args.font);
@@ -1815,33 +1601,33 @@ int main(int argc, char **argv) {
 		}
 	}
 
+	if (!state.args.hide_cancel) {
+		fill_action(&state, ACTION_CANCEL, "cancel", "", NULL, XKB_KEY_c);
+		state.actions[ACTION_CANCEL].show = true;
+		++state.n_actions;
+	}
+
+	int n_non_cancel_actions = state.n_actions - (!state.args.hide_cancel);
+	if (n_non_cancel_actions < 1) {
+		waylogout_log(LOG_ERROR, "No action commands configured --- "
+				"no point running if user's only option is to do nothing.");
+		return EXIT_FAILURE;
+	}
+
+	waylogout_log(LOG_DEBUG, "Found %d configured actions", state.n_actions);
+
 	if (line_mode == LM_INSIDE) {
 		state.args.colors.line = state.args.colors.inside;
 	} else if (line_mode == LM_RING) {
 		state.args.colors.line = state.args.colors.ring;
 	}
 
-	if (state.args.password_grace_period > 0) {
-		state.auth_state = AUTH_STATE_GRACE;
-	}
-
-	if (state.args.user)
-		get_username(&(state.username));
-
-#ifdef __linux__
-	// Most non-linux platforms require root to mlock()
-	if (mlock(state.password.buffer, sizeof(state.password.buffer)) != 0) {
-		swaylogout_log(LOG_ERROR, "Unable to mlock() password memory.");
-		return EXIT_FAILURE;
-	}
-#endif
-
 	wl_list_init(&state.surfaces);
 	state.xkb.context = xkb_context_new(XKB_CONTEXT_NO_FLAGS);
 	state.display = wl_display_connect(NULL);
 	if (!state.display) {
 		free(state.args.font);
-		swaylogout_log(LOG_ERROR, "Unable to connect to the compositor. "
+		waylogout_log(LOG_ERROR, "Unable to connect to the compositor. "
 				"If your compositor is running, check or set the "
 				"WAYLAND_DISPLAY environment variable.");
 		return EXIT_FAILURE;
@@ -1853,7 +1639,7 @@ int main(int argc, char **argv) {
 	assert(state.compositor && state.layer_shell && state.shm);
 	if (!state.input_inhibit_manager) {
 		free(state.args.font);
-		swaylogout_log(LOG_ERROR, "Compositor does not support the input "
+		waylogout_log(LOG_ERROR, "Compositor does not support the input "
 				"inhibitor protocol, refusing to run insecurely");
 		return 1;
 	}
@@ -1861,26 +1647,19 @@ int main(int argc, char **argv) {
 	zwlr_input_inhibit_manager_v1_get_inhibitor(state.input_inhibit_manager);
 	if (wl_display_roundtrip(state.display) == -1) {
 		free(state.args.font);
-		swaylogout_log(LOG_ERROR, "Exiting - failed to inhibit input:"
-				" is another lockscreen already running?");
+		waylogout_log(LOG_ERROR, "Exiting - failed to inhibit input:"
+				" is a lockscreen already running?");
 		return 2;
 	}
 
-	// Must daemonize before we run any effects, since effects use openmp
-	int daemonfd;
-	if (state.args.daemonize) {
-		wl_display_roundtrip(state.display);
-		daemonfd = daemonize_start();
-	}
-
 	// Need to apply effects to all images loaded with --image
-	struct swaylogout_image *iter_image, *temp;
+	struct waylogout_image *iter_image, *temp;
 	wl_list_for_each_safe(iter_image, temp, &state.images, link) {
 		iter_image->cairo_surface = apply_effects(
 				iter_image->cairo_surface, &state, 1);
 	}
 
-	struct swaylogout_surface *surface;
+	struct waylogout_surface *surface;
 	wl_list_for_each(surface, &state.surfaces, link) {
 		create_layer_surface(surface);
 	}
@@ -1895,19 +1674,7 @@ int main(int argc, char **argv) {
 	loop_add_fd(state.eventloop, wl_display_get_fd(state.display), POLLIN,
 			display_in, NULL);
 
-	loop_add_fd(state.eventloop, get_comm_reply_fd(), POLLIN, comm_in, NULL);
-
 	loop_add_timer(state.eventloop, 1000, timer_render, &state);
-
-	if (state.args.daemonize && state.args.fade_in) {
-		loop_add_timer(state.eventloop, state.args.fade_in + 500, daemonize_done, &daemonfd);
-	} else if (state.args.daemonize) {
-		daemonize_done(&daemonfd);
-	}
-
-	if (state.args.password_grace_period > 0) {
-		loop_add_timer(state.eventloop, state.args.password_grace_period, end_grace_period, &state);
-	}
 
 	// Re-draw once to start the draw loop
 	damage_state(&state);
@@ -1919,10 +1686,6 @@ int main(int argc, char **argv) {
 			break;
 		}
 		loop_poll(state.eventloop);
-	}
-
-	if (state.args.daemonize && state.args.fade_in) {
-		daemonize_done(&daemonfd); // In case we exit before --fade-in timeout
 	}
 
 	free(state.args.font);

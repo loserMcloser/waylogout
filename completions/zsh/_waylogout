@@ -1,6 +1,6 @@
-#compdef swaylogout
+#compdef waylogout
 #
-# Completion script for swaylogout
+# Completion script for waylogout
 #
 
 _arguments -s \

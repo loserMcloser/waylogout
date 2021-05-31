@@ -1,6 +1,6 @@
-# swaylogout(1) completion
+# waylogout(1) completion
 
-_swaylogout()
+_waylogout()
 {
   local cur prev
   _get_comp_words_by_ref -n : cur prev
@@ -119,4 +119,4 @@ _swaylogout()
   fi
 
 } &&
-complete -F _swaylogout swaylock
+complete -F _waylogout waylogout

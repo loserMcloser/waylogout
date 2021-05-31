@@ -1,7 +1,7 @@
 project(
-	'swaylock',
+	'waylogout',
 	'c',
-	version: '1.6-3',
+	version: '0.1',
 	license: 'MIT',
 	meson_version: '>=0.48.0',
 	default_options: [
@@ -63,8 +63,6 @@ cairo          = dependency('cairo')
 gdk_pixbuf     = dependency('gdk-pixbuf-2.0', required: get_option('gdk-pixbuf'))
 bash_comp      = dependency('bash-completion', required: false)
 fish_comp      = dependency('fish', required: false)
-libpam         = cc.find_library('pam', required: get_option('pam'))
-crypt          = cc.find_library('crypt', required: not libpam.found())
 math           = cc.find_library('m')
 rt             = cc.find_library('rt')
 dl             = cc.find_library('dl')
@@ -81,7 +79,7 @@ if git.found()
 		version = '"@0@ (" __DATE__ ", branch \'@1@\')"'.format(git_commit_hash.stdout().strip(), git_branch.stdout().strip())
 	endif
 endif
-add_project_arguments('-DSWAYLOCK_VERSION=@0@'.format(version), language: 'c')
+add_project_arguments('-DWAYLOGOUT_VERSION=@0@'.format(version), language: 'c')
 
 wl_protocol_dir = wayland_protos.get_pkgconfig_variable('pkgdatadir')
 
@@ -150,11 +148,10 @@ dependencies = [
 sources = [
 	'background-image.c',
 	'cairo.c',
-	'comm.c',
 	'log.c',
 	'loop.c',
 	'main.c',
-	'password.c',
+	'keys.c',
 	'pool-buffer.c',
 	'render.c',
 	'seat.c',
@@ -163,35 +160,20 @@ sources = [
 	'fade.c',
 ]
 
-if libpam.found()
-	sources += ['pam.c']
-	dependencies += [libpam]
-else
-	warning('The swaylock binary must be setuid when compiled without libpam')
-	warning('You must do this manually post-install: chmod a+s /path/to/swaylock')
-	sources += ['shadow.c']
-	dependencies += [crypt]
-endif
+waylogout_inc = include_directories('include')
 
-swaylock_inc = include_directories('include')
-
-executable('swaylock',
+executable('waylogout',
 	sources,
-	include_directories: [swaylock_inc],
+	include_directories: [waylogout_inc],
 	dependencies: dependencies,
 	install: true
-)
-
-install_data(
-	'pam/swaylock',
-	install_dir: sysconfdir + '/pam.d/'
 )
 
 if scdoc.found()
 	sh = find_program('sh')
 	mandir = get_option('mandir')
 	man_files = [
-		'swaylock.1.scd',
+		'waylogout.1.scd',
 	]
 	foreach filename : man_files
 		topic = filename.split('.')[-3].split('/')[-1]
@@ -215,7 +197,7 @@ datadir = get_option('datadir')
 
 if get_option('zsh-completions')
 	zsh_files = files(
-		'completions/zsh/_swaylock',
+		'completions/zsh/_waylogout',
 	)
 	zsh_install_dir = datadir + '/zsh/site-functions'
 
@@ -224,7 +206,7 @@ endif
 
 if get_option('bash-completions')
 	bash_files = files(
-		'completions/bash/swaylock',
+		'completions/bash/waylogout',
 	)
 	if bash_comp.found()
 		bash_install_dir = bash_comp.get_pkgconfig_variable('completionsdir')
@@ -237,7 +219,7 @@ endif
 
 if get_option('fish-completions')
 	fish_files = files(
-		'completions/fish/swaylock.fish',
+		'completions/fish/waylogout.fish',
 	)
 	if fish_comp.found()
 		fish_install_dir = fish_comp.get_pkgconfig_variable('completionsdir')
