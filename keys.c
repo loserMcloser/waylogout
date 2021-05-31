@@ -136,9 +136,9 @@ void waylogout_handle_key(struct waylogout_state *state,
 			codepoint = 58;
 		if (codepoint > 12)
 			codepoint -= 48;
+		codepoint = codepoint % wl_list_length(&state->actions);
+		codepoint = (codepoint == 0) ? (uint32_t) wl_list_length(&state->actions) : codepoint;
 		struct wl_list *list_iter = &state->actions;
-		if ((int) codepoint > wl_list_length(&state->actions))
-			++codepoint;
 		for (uint32_t count = 0; count < codepoint; ++count)
 			list_iter = list_iter->next;
 		state->selected_action = wl_container_of(list_iter, action_iter, link);

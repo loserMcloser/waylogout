@@ -205,8 +205,11 @@ static void destroy_surface(struct waylogout_surface *surface) {
 	}
 	destroy_buffer(&surface->buffers[0]);
 	destroy_buffer(&surface->buffers[1]);
-	destroy_buffer(&surface->indicator_buffers[0]);
-	destroy_buffer(&surface->indicator_buffers[1]);
+	struct waylogout_action *action_iter;
+	wl_list_for_each(action_iter, &surface->state->actions, link) {
+		destroy_buffer(&action_iter->indicator_buffers[0]);
+		destroy_buffer(&action_iter->indicator_buffers[1]);
+	}
 	fade_destroy(&surface->fade);
 	wl_output_destroy(surface->output);
 	free(surface);
@@ -254,11 +257,16 @@ static void create_layer_surface(struct waylogout_surface *surface) {
 	surface->surface = wl_compositor_create_surface(state->compositor);
 	assert(surface->surface);
 
-	surface->child = wl_compositor_create_surface(state->compositor);
-	assert(surface->child);
-	surface->subsurface = wl_subcompositor_get_subsurface(state->subcompositor, surface->child, surface->surface);
-	assert(surface->subsurface);
-	wl_subsurface_set_sync(surface->subsurface);
+	struct waylogout_action *action_iter;
+	wl_list_for_each(action_iter, &state->actions, link) {
+		action_iter->child_surface = wl_compositor_create_surface(state->compositor);
+		assert(action_iter->child_surface);
+		action_iter->subsurface = wl_subcompositor_get_subsurface(
+				state->subcompositor, action_iter->child_surface,
+				surface->surface);
+		assert(action_iter->subsurface);
+		wl_subsurface_set_sync(action_iter->subsurface);
+	}
 
 	surface->layer_surface = zwlr_layer_shell_v1_get_layer_surface(
 			state->layer_shell, surface->surface, surface->output,
@@ -306,7 +314,7 @@ static void initially_render_surface(struct waylogout_surface *surface) {
 
 	render_frame_background(surface);
 	render_background_fade_prepare(surface, surface->current_buffer);
-	render_frame(surface);
+	render_frames(surface);
 }
 
 static void layer_surface_configure(void *data,
@@ -316,8 +324,11 @@ static void layer_surface_configure(void *data,
 	struct waylogout_surface *surface = data;
 	surface->width = width;
 	surface->height = height;
-	surface->indicator_width = 1;
-	surface->indicator_height = 1;
+	struct waylogout_action *action_iter;
+	wl_list_for_each(action_iter, &surface->state->actions, link) {
+		action_iter->indicator_width = 1;
+		action_iter->indicator_height = 1;
+	}
 	zwlr_layer_surface_v1_ack_configure(layer_surface, serial);
 
 	if (--surface->events_pending == 0) {
@@ -358,7 +369,7 @@ static void surface_frame_handle_done(void *data, struct wl_callback *callback,
 			surface->dirty = true;
 		}
 
-		render_frame(surface);
+		render_frames(surface);
 	}
 }
 
@@ -867,19 +878,69 @@ static void add_action(struct waylogout_state *state, char *label,
 		new_action->command = strdup(command);
 	new_action->shortcut = shortcut;
 
-	wl_list_insert(&state->actions, &new_action->link);
+	for (size_t i = 0; i < 2; ++i)
+		new_action->indicator_buffers[i] = (struct pool_buffer){
+			.buffer = NULL,
+			.surface = NULL,
+			.cairo = NULL,
+			.width = 0,
+			.height = 0,
+			.data = NULL,
+			.size = 0,
+			.busy = false
+		};
+
+	// insert new action at end of list
+	wl_list_insert(state->actions.prev, &new_action->link);
 
 	waylogout_log(LOG_DEBUG,
-	  "Action %s:  \n"
-	  "  pointer %p\n"
-	  "  symbol  %s\n"
-	  "  command %s  "
+	  "Action %s:     \n"
+	  "  pointer %p   \n"
+	  "  symbol  %s   \n"
+	  "  command %s   \n"
+	  "  buffer %d:   \n"
+	  "    buffer  %p \n"
+	  "    surface %p \n"
+	  "    cairo   %p \n"
+	  "    width   %u \n"
+	  "    height  %u \n"
+	  "    data    %p \n"
+	  "    size    %ld\n"
+	  "    %sbusy     \n"
+	  "  buffer %d:   \n"
+	  "    buffer  %p \n"
+	  "    surface %p \n"
+	  "    cairo   %p \n"
+	  "    width   %u \n"
+	  "    height  %u \n"
+	  "    data    %p \n"
+	  "    size    %ld\n"
+	  "    %sbusy       "
 	  ,
 	  new_action->label,
 	  new_action,
 	  new_action->symbol,
-	  new_action->command
+	  new_action->command,
+	  0,
+	  new_action->indicator_buffers[0].buffer,
+	  new_action->indicator_buffers[0].surface,
+	  new_action->indicator_buffers[0].cairo,
+	  new_action->indicator_buffers[0].width,
+	  new_action->indicator_buffers[0].height,
+	  new_action->indicator_buffers[0].data,
+	  new_action->indicator_buffers[0].size,
+	  new_action->indicator_buffers[0].busy ? "" : "not ",
+	  1,
+	  new_action->indicator_buffers[1].buffer,
+	  new_action->indicator_buffers[1].surface,
+	  new_action->indicator_buffers[1].cairo,
+	  new_action->indicator_buffers[1].width,
+	  new_action->indicator_buffers[1].height,
+	  new_action->indicator_buffers[1].data,
+	  new_action->indicator_buffers[1].size,
+	  new_action->indicator_buffers[1].busy ? "" : "not "
 	);
+
 }
 
 // TODO lots of editting/pruning to do here
@@ -1135,6 +1196,7 @@ static int parse_options(int argc, char **argv, struct waylogout_state *state,
 			}
 			break;
 		case 'd':
+			state->args.debug = true;
 			waylogout_log_init(LOG_DEBUG);
 			break;
 		case LO_TRACE:
@@ -1566,6 +1628,7 @@ int main(int argc, char **argv) {
 		.labels = false,
 		.hide_cancel = false,
 		.screenshots = false,
+		.debug = false,
 		.effects = NULL,
 		.effects_count = 0,
 	};

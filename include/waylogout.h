@@ -42,10 +42,12 @@ struct waylogout_args {
 	uint32_t thickness;
 	uint32_t indicator_x_position;
 	uint32_t indicator_y_position;
+	uint32_t indicator_sep;
 	bool override_indicator_x_position;
 	bool override_indicator_y_position;
 	bool labels;
 	bool hide_cancel;
+	bool debug;
 
 	bool screenshots;
 	struct waylogout_effect *effects;
@@ -59,6 +61,11 @@ struct waylogout_action {
 	char symbol[8];
 	char *command;
 	xkb_keysym_t shortcut;
+	struct wl_surface *child_surface; // surface made into subsurface
+	struct wl_subsurface *subsurface;
+	struct pool_buffer indicator_buffers[2];
+	uint32_t indicator_width, indicator_height;
+	uint32_t indicator_xcenter, indicator_ycenter;
 	struct wl_list link;
 };
 
@@ -98,18 +105,14 @@ struct waylogout_surface {
 	uint32_t output_global_name;
 	struct zxdg_output_v1 *xdg_output;
 	struct wl_surface *surface;
-	struct wl_surface *child; // surface made into subsurface
-	struct wl_subsurface *subsurface;
 	struct zwlr_layer_surface_v1 *layer_surface;
 	struct zwlr_screencopy_frame_v1 *screencopy_frame;
 	struct pool_buffer buffers[2];
-	struct pool_buffer indicator_buffers[2];
 	struct pool_buffer *current_buffer;
 	struct waylogout_fade fade;
 	int events_pending;
 	bool frame_pending, dirty;
 	uint32_t width, height;
-	uint32_t indicator_width, indicator_height;
 	int32_t scale;
 	enum wl_output_subpixel subpixel;
 	enum wl_output_transform transform;
@@ -125,6 +128,19 @@ struct waylogout_image {
 	struct wl_list link;
 };
 
+struct waylogout_frame_common {
+	uint32_t arc_radius;
+	uint32_t arc_thickness;
+	uint32_t inner_radius;
+	uint32_t outer_radius;
+	uint32_t indicator_diameter;
+	uint32_t x_offset;
+	uint32_t x_center;
+	uint32_t y_center;
+	uint32_t n_drawn;
+	double font_size;
+};
+
 void waylogout_handle_key(struct waylogout_state *state,
 		xkb_keysym_t keysym, uint32_t codepoint);
 void waylogout_handle_mouse(struct waylogout_state *state);
@@ -132,8 +148,10 @@ void waylogout_handle_touch(struct waylogout_state *state);
 void render_frame_background(struct waylogout_surface *surface);
 void render_background_fade(struct waylogout_surface *surface, uint32_t time);
 void render_background_fade_prepare(struct waylogout_surface *surface, struct pool_buffer *buffer);
-void render_frame(struct waylogout_surface *surface);
-void render_frames(struct waylogout_state *state);
+void render_frame(struct waylogout_action *action,
+		struct waylogout_surface *surface,
+		struct waylogout_frame_common fr_common);
+void render_frames(struct waylogout_surface *surface);
 void damage_surface(struct waylogout_surface *surface);
 void damage_state(struct waylogout_state *state);
 
