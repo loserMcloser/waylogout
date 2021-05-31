@@ -57,6 +57,7 @@ foreach cflag : test_cflags
 endforeach
 
 wayland_client = dependency('wayland-client')
+wayland_cursor = dependency('wayland-cursor')
 wayland_protos = dependency('wayland-protocols', version: '>=1.14')
 xkbcommon      = dependency('xkbcommon')
 cairo          = dependency('cairo')
@@ -143,6 +144,7 @@ dependencies = [
 	dl,
 	xkbcommon,
 	wayland_client,
+	wayland_cursor,
 ]
 
 sources = [

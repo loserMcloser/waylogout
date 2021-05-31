@@ -10,6 +10,7 @@
 #include "seat.h"
 #include "waylogout.h"
 #include "unicode.h"
+#include "log.h"
 
 // TODO handle mouse clicks
 void waylogout_handle_mouse(struct waylogout_state *state) {
@@ -32,8 +33,7 @@ void waylogout_handle_key(struct waylogout_state *state,
 
 	// TODO handle navigation by arrow keys
 
-	int i,j;
-	bool selection_made;
+	struct waylogout_action *action_iter;
 
 	switch (keysym) {
 	case XKB_KEY_KP_Enter: /* fallthrough */
@@ -44,37 +44,18 @@ void waylogout_handle_key(struct waylogout_state *state,
 		state->run_display = false;
 		break;
 	case XKB_KEY_Left:
-		selection_made = false;
-		i = state->selected_action;
-		if (i > -1)
-			state->actions[i].selected = false;
+		if (state->selected_action)
+			state->selected_action = state->selected_action->prev;
 		else
-			i = 0;
-		while (!selection_made) {
-			if (i == 0)
-				i = N_WAYLOGOUT_ACTIONS;
-			--i;
-			if (state->actions[i].show) {
-				state->actions[i].selected = true;
-				state->selected_action = i;
-				selection_made = true;
-			}
-		}
+			state->selected_action = state->last_action;
+		damage_state(state);
 		break;
 	case XKB_KEY_Right:
-		selection_made = false;
-		i = state->selected_action;
-		if (i > -1)
-			state->actions[i].selected = false;
-		while (!selection_made) {
-			if (++i == N_WAYLOGOUT_ACTIONS)
-				i = 0;
-			if (state->actions[i].show) {
-				state->actions[i].selected = true;
-				state->selected_action = i;
-				selection_made = true;
-			}
-		}
+		if (state->selected_action)
+			state->selected_action = state->selected_action->next;
+		else
+			state->selected_action = state->first_action;
+		damage_state(state);
 		break;
 	// case XKB_KEY_Caps_Lock:
 	// case XKB_KEY_Shift_L:
@@ -87,15 +68,84 @@ void waylogout_handle_key(struct waylogout_state *state,
 	// case XKB_KEY_Alt_R:
 	// case XKB_KEY_Super_L:
 	// case XKB_KEY_Super_R:
+	case XKB_KEY_F1:
+		codepoint = 1;
+		 /* fallthrough */
+	case XKB_KEY_F2:
+		if (codepoint == 0)
+			codepoint = 2;
+		 /* fallthrough */
+	case XKB_KEY_F3:
+		if (codepoint == 0)
+			codepoint = 3;
+		 /* fallthrough */
+	case XKB_KEY_F4:
+		if (codepoint == 0)
+			codepoint = 4;
+		 /* fallthrough */
+	case XKB_KEY_F5:
+		if (codepoint == 0)
+			codepoint = 5;
+		 /* fallthrough */
+	case XKB_KEY_F6:
+		if (codepoint == 0)
+			codepoint = 6;
+		 /* fallthrough */
+	case XKB_KEY_F7:
+		if (codepoint == 0)
+			codepoint = 7;
+		 /* fallthrough */
+	case XKB_KEY_F8:
+		if (codepoint == 0)
+			codepoint = 8;
+		 /* fallthrough */
+	case XKB_KEY_F9:
+		if (codepoint == 0)
+			codepoint = 9;
+		 /* fallthrough */
+	case XKB_KEY_F10:
+		if (codepoint == 0)
+			codepoint = 10;
+		 /* fallthrough */
+	case XKB_KEY_F11:
+		if (codepoint == 0)
+			codepoint = 11;
+		 /* fallthrough */
+	case XKB_KEY_F12:
+		if (codepoint == 0)
+			codepoint = 12;
+		 /* fallthrough */
+	case XKB_KEY_0:
+	case XKB_KEY_1:
+	case XKB_KEY_2:
+	case XKB_KEY_3:
+	case XKB_KEY_4:
+	case XKB_KEY_5:
+	case XKB_KEY_6:
+	case XKB_KEY_7:
+	case XKB_KEY_8:
+	case XKB_KEY_9:
+		if (codepoint == 48)
+			codepoint = 58;
+		if (codepoint > 12)
+			codepoint -= 48;
+		action_iter = state->last_action;
+		for (uint32_t count = 0; count < codepoint; ++count)
+			action_iter = action_iter->next;
+		state->selected_action = action_iter;
+		damage_state(state);
+		break;
 	default:
-		for (i = 0; i < N_WAYLOGOUT_ACTIONS; ++i)
-			if (state->actions[i].show && state->actions[i].shortcut == keysym) {
+		action_iter = state->first_action;
+		while (true) {
+			if (action_iter->shortcut == keysym) {
+				state->selected_action = action_iter;
+				damage_state(state);
 				break;
 			}
-		if (i < N_WAYLOGOUT_ACTIONS) {
-			state->selected_action = i;
-			for (j = 0; j < N_WAYLOGOUT_ACTIONS; ++j)
-				state->actions[j].selected = (j == i);
+			if (action_iter == state->last_action)
+				break;
+			action_iter = action_iter->next;
 		}
 	}
 }

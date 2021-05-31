@@ -7,8 +7,6 @@
 #include "background-image.h"
 #include "waylogout.h"
 
-#include "log.h" // TODO remove
-
 #define M_PI 3.14159265358979323846
 
 static void set_color_for_state(cairo_t *cairo, bool selected,
@@ -129,9 +127,6 @@ void render_frame(struct waylogout_surface *surface) {
 			(state->args.radius + state->args.thickness);
 	}
 
-	waylogout_log(LOG_DEBUG, "width/height/pos: %d %d %d %d", surface->width, surface->height, subsurf_xpos, subsurf_ypos);
-	waylogout_log(LOG_DEBUG, "indicator width/height: %d %d", buffer_width, buffer_height);
-
 	wl_subsurface_set_position(surface->subsurface, subsurf_xpos, subsurf_ypos);
 
 	surface->current_buffer = get_next_buffer(state->shm,
@@ -161,19 +156,16 @@ void render_frame(struct waylogout_surface *surface) {
 	cairo_paint(cairo);
 	cairo_restore(cairo);
 
-	int n_actions_drawn = 0;
-	for (int i = 0; i < N_WAYLOGOUT_ACTIONS; ++i) {
+	struct waylogout_action *action_iter = state->last_action;
+	for (int i = 0; i < state->n_actions; ++i) {
 
-		waylogout_log(LOG_DEBUG, "show for action %d: %d", i, state->actions[i].show);
+		action_iter = action_iter->next;
 
-		if (! state->actions[i].show)
-			continue;
-
-		bool selected = state->actions[i].selected;
+		bool selected = (action_iter == state->selected_action);
 
 		int this_width = indicator_diameter;
 
-		double x_pos = (buffer_width / 2.0f) - ((state->n_actions - 1) / 2.0f - n_actions_drawn) * x_offset;
+		double x_pos = (buffer_width / 2.0f) - ((state->n_actions - 1) / 2.0f - i) * x_offset;
 
 		// Draw circle
 		cairo_set_line_width(cairo, arc_thickness);
@@ -205,7 +197,7 @@ void render_frame(struct waylogout_surface *surface) {
 		if (state->args.labels) {
 			cairo_select_font_face(cairo, state->args.font,
 				CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_NORMAL);
-			char* text = state->actions[i].label;
+			char* text = action_iter->label;
 			cairo_text_extents(cairo, text, &extents);
 			cairo_font_extents(cairo, &fe);
 			x = x_pos - (extents.width / 2 + extents.x_bearing);
@@ -218,8 +210,7 @@ void render_frame(struct waylogout_surface *surface) {
 				this_width = extents.width;
 		}
 
-		// char symbol[4] = "";  // TODO symbol
-		char *symbol = state->actions[i].symbol;
+		char *symbol = action_iter->symbol;
 		cairo_select_font_face(
 		  cairo,
 		  "Font Awesome 5 Free",
@@ -252,10 +243,7 @@ void render_frame(struct waylogout_surface *surface) {
 				arc_radius + arc_thickness / 2, 0, 2 * M_PI);
 		cairo_stroke(cairo);
 
-		waylogout_log(LOG_DEBUG, "new width for %d: %d", i, new_width);
-
 		new_width += this_width + indicator_sep;
-		++n_actions_drawn;
 	}
 
 	new_width -= indicator_sep;

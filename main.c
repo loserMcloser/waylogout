@@ -261,7 +261,7 @@ static void create_layer_surface(struct waylogout_surface *surface) {
 
 	surface->layer_surface = zwlr_layer_shell_v1_get_layer_surface(
 			state->layer_shell, surface->surface, surface->output,
-			ZWLR_LAYER_SHELL_V1_LAYER_OVERLAY, "lockscreen");
+			ZWLR_LAYER_SHELL_V1_LAYER_OVERLAY, "logout_dialog");
 	assert(surface->layer_surface);
 
 	zwlr_layer_surface_v1_set_size(surface->layer_surface, 0, 0);
@@ -844,26 +844,47 @@ enum line_mode {
 	LM_RING,
 };
 
-static void fill_action(struct waylogout_state *state,
-	enum waylogout_actions action, char *label, char *symbol, char *command,
-	xkb_keysym_t shortcut) {
-	state->actions[action] = (struct waylogout_action){
-		.show = true,
-		.selected = false,
-		.label = strdup(label),
-		.shortcut = shortcut,
-	};
-	strncpy(state->actions[action].symbol, symbol, 4);
+static void add_action(struct waylogout_state *state, char *label,
+		char *symbol, char *command, xkb_keysym_t shortcut) {
+
+	struct waylogout_action *new_action = malloc(sizeof(struct waylogout_action));
+
+	new_action->label = strdup(label);
+	strncpy(new_action->symbol, symbol, 4);
 	if (command)
-		state->actions[action].command = strdup(command);
+		new_action->command = strdup(command);
+	new_action->shortcut = shortcut;
+
+	if (state->n_actions == 0)
+		state->first_action = new_action;
+	else
+		state->last_action->next = new_action;
+
+	new_action->next = state->first_action;
+
+	// this will be undefined if this is the first action,
+	// but in that case the line immediately following this one will fix things
+	new_action->prev = state->last_action;
+
+	state->first_action->prev = new_action;
+	state->last_action = new_action;
+	++state->n_actions;
+
+	waylogout_log(LOG_DEBUG, "First action: pointer %p", state->first_action);
 	waylogout_log(LOG_DEBUG,
 	  "Action %s:  \n"
+	  "  pointer %p\n"
 	  "  symbol  %s\n"
-	  "  command %s  "
+	  "  command %s\n"
+	  "  prev    %p\n"
+	  "  next    %p  "
 	  ,
-	  state->actions[action].label,
-	  state->actions[action].symbol,
-	  state->actions[action].command
+	  state->last_action->label,
+	  state->last_action,
+	  state->last_action->symbol,
+	  state->last_action->command,
+	  state->last_action->prev,
+	  state->last_action->next
 	);
 }
 
@@ -1362,81 +1383,74 @@ static int parse_options(int argc, char **argv, struct waylogout_state *state,
 			}
 			break;
 		case LO_COMMAND_POWEROFF:
-			if (state) {
-				fill_action(
-					state, ACTION_POWEROFF, "power off",
-					"",
-					optarg,
-					XKB_KEY_p
+			if (state)
+				add_action(
+				  state,
+				  "power off",
+				  "",
+				  optarg,
+				  XKB_KEY_p
 				);
-				++(state->n_actions);
-			}
 			break;
 		case LO_COMMAND_REBOOT:
-			if (state) {
-				fill_action(
-					state, ACTION_REBOOT, "reboot",
-					"",
-					optarg,
-					XKB_KEY_r
+			if (state)
+				add_action(
+				  state,
+				  "reboot",
+				  "",
+				  optarg,
+				  XKB_KEY_r
 				);
-				++(state->n_actions);
-			}
 			break;
 		case LO_COMMAND_SUSPEND:
-			if (state) {
-				fill_action(
-					state, ACTION_SUSPEND, "sleep",
-					"",
-					optarg,
-					XKB_KEY_s
+			if (state)
+				add_action(
+				  state,
+				  "sleep",
+				  "",
+				  optarg,
+				  XKB_KEY_s
 				);
-				++(state->n_actions);
-			}
 			break;
 		case LO_COMMAND_HIBERNATE:
-			if (state) {
-				fill_action(
-					state, ACTION_HIBERNATE, "hibernate",
-					"",
-					optarg,
-					XKB_KEY_h
+			if (state)
+				add_action(
+				  state,
+				  "hibernate",
+				  "",
+				  optarg,
+				  XKB_KEY_h
 				);
-				++(state->n_actions);
-			}
 			break;
 		case LO_COMMAND_LOGOUT:
-			if (state) {
-				fill_action(
-					state, ACTION_HIBERNATE, "logout",
-					"",
-					optarg,
-					XKB_KEY_x
+			if (state)
+				add_action(
+				  state,
+				  "logout",
+				  "",
+				  optarg,
+				  XKB_KEY_x
 				);
-				++(state->n_actions);
-			}
 			break;
 		case LO_COMMAND_LOCK:
-			if (state) {
-				fill_action(
-					state, ACTION_HIBERNATE, "lock",
-					"",
-					optarg,
-					XKB_KEY_k
+			if (state)
+				add_action(
+				  state,
+				  "lock",
+				  "",
+				  optarg,
+				  XKB_KEY_k
 				);
-				++(state->n_actions);
-			}
 			break;
 		case LO_COMMAND_SWITCH:
-			if (state) {
-				fill_action(
-					state, ACTION_HIBERNATE, "switch user",
-					"",
-					optarg,
-					XKB_KEY_w
+			if (state)
+				add_action(
+				  state,
+				  "switch user",
+				  "",
+				  optarg,
+				  XKB_KEY_w
 				);
-				++(state->n_actions);
-			}
 			break;
 		case LO_HIDE_CANCEL:
 			if (state)
@@ -1560,14 +1574,9 @@ int main(int argc, char **argv) {
 		.screenshots = false,
 		.effects = NULL,
 		.effects_count = 0,
-		.user = false,
 	};
-	state.selected_action = -1;
+	state.selected_action = NULL;
 	state.n_actions = 0;
-	for (int i = 0; i < N_WAYLOGOUT_ACTIONS; i++) {
-		state.actions[i].show = false;
-		state.actions[i].selected = false;
-	}
 
 	wl_list_init(&state.images);
 	set_default_colors(&state.args.colors);
@@ -1601,11 +1610,8 @@ int main(int argc, char **argv) {
 		}
 	}
 
-	if (!state.args.hide_cancel) {
-		fill_action(&state, ACTION_CANCEL, "cancel", "", NULL, XKB_KEY_c);
-		state.actions[ACTION_CANCEL].show = true;
-		++state.n_actions;
-	}
+	if (!state.args.hide_cancel)
+		add_action(&state, "cancel", "", NULL, XKB_KEY_c);
 
 	int n_non_cancel_actions = state.n_actions - (!state.args.hide_cancel);
 	if (n_non_cancel_actions < 1) {
