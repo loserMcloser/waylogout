@@ -12,7 +12,7 @@
 
 static void set_color_for_state(cairo_t *cairo, bool selected,
 		struct waylogout_colorset *colorset) {
-	cairo_set_source_u32(cairo, selected ? colorset->highlight : colorset->normal);
+	cairo_set_source_u32(cairo, selected ? colorset->selected : colorset->normal);
 }
 
 void render_frame_background(struct waylogout_surface *surface) {
@@ -164,7 +164,6 @@ void render_frame(struct waylogout_action *action,
 	cairo_stroke(cairo);
 
 	// Draw symbol and label
-	cairo_set_font_size(cairo, fr_common.font_size);
 	set_color_for_state(cairo, selected, &state->args.colors.text);
 
 	cairo_text_extents_t extents;
@@ -173,7 +172,10 @@ void render_frame(struct waylogout_action *action,
 	double x,y;
 	y = 0.0f;
 
-	if (state->args.labels) {
+	bool show_label = state->args.labels || (state->args.selection_label && selected);
+
+	if (show_label) {
+		cairo_set_font_size(cairo, fr_common.label_font_size);
 		cairo_select_font_face(cairo, state->args.font,
 			CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_NORMAL);
 		char* text = action->label;
@@ -190,6 +192,8 @@ void render_frame(struct waylogout_action *action,
 	}
 
 	char *symbol = action->symbol;
+	cairo_set_font_size(cairo, selected ?
+		fr_common.selected_symbol_font_size : fr_common.symbol_font_size);
 	cairo_select_font_face(
 		cairo,
 		"Font Awesome 5 Free",
@@ -200,10 +204,14 @@ void render_frame(struct waylogout_action *action,
 	cairo_text_extents(cairo, symbol, &extents);
 	cairo_font_extents(cairo, &fe);
 	x = relative_xcenter - (extents.width / 2 + extents.x_bearing);
-	if (state->args.labels)
-		y -= fe.height * 1.25f;
+	y = relative_ycenter;
+	if (show_label)
+		y = 3 * y / 5;
+	y += (fe.height / 2 - fe.descent);
+	if (show_label)
+		y += fe.height / 5;
 	else
-		y = relative_ycenter + (fe.height / 2 - fe.descent) - fe.height / 10;
+		y -= fe.height/10;
 	cairo_move_to(cairo, x, y);
 	cairo_show_text(cairo, symbol);
 	cairo_close_path(cairo);
@@ -240,17 +248,25 @@ void render_frame(struct waylogout_action *action,
 
 void render_frames(struct waylogout_surface *surface) {
 	struct waylogout_state *state = surface->state;
-	// TODO turn indicator_sep into an option
-	state->args.indicator_sep = 3;
 
 	struct waylogout_frame_common fr_common;
 	fr_common.arc_radius = state->args.radius * surface->scale;
 	fr_common.arc_thickness = state->args.thickness * surface->scale;
 	fr_common.inner_radius = fr_common.arc_radius - fr_common.arc_thickness / 2;
 	fr_common.outer_radius = fr_common.arc_radius + fr_common.arc_thickness / 2;
-	fr_common.indicator_diameter = (fr_common.arc_radius + fr_common.arc_thickness) * 2;
+	fr_common.indicator_diameter = fr_common.arc_radius * 2 + fr_common.arc_thickness;
+
+	int n_actions = wl_list_length(&state->actions);
+	int indicator_sep = (state->args.indicator_sep > 0)
+	  ? state->args.indicator_sep
+	  : (surface->width - n_actions * fr_common.indicator_diameter)
+	    / (n_actions + 1)
+	;
+	if (indicator_sep < 0)
+		indicator_sep = fr_common.arc_thickness;
+
 	// TODO should this be divided by surface->scale ?
-	fr_common.x_offset = fr_common.indicator_diameter + state->args.indicator_sep;
+	fr_common.x_offset = fr_common.indicator_diameter + indicator_sep;
 
 	fr_common.x_center = (state->args.override_indicator_x_position)
 			? state->args.indicator_x_position
@@ -260,13 +276,25 @@ void render_frames(struct waylogout_surface *surface) {
 			? state->args.indicator_y_position
 			: surface->height / 2;
 
-	if (state->args.font_size > 0) {
-		fr_common.font_size = state->args.font_size;
-	} else if (state->args.labels) {
-		fr_common.font_size = fr_common.arc_radius / 3.0f;
-	} else {
-		fr_common.font_size = fr_common.arc_radius / 1.5f;
-	}
+	if (state->args.symbol_font_size > 0)
+		fr_common.symbol_font_size = state->args.symbol_font_size;
+	else if (state->args.labels)
+		if (state->args.label_font_size > 0)
+			fr_common.symbol_font_size = state->args.label_font_size;
+		else
+			fr_common.symbol_font_size = fr_common.arc_radius / 3.0f;
+	else
+		fr_common.symbol_font_size = fr_common.arc_radius / 1.5f;
+
+	if (state->args.label_font_size > 0)
+		fr_common.label_font_size = state->args.label_font_size;
+	else
+		fr_common.label_font_size = fr_common.arc_radius / 3.0f;
+
+	if (state->args.selection_label && !state->args.labels)
+		fr_common.selected_symbol_font_size = fr_common.label_font_size;
+	else
+		fr_common.selected_symbol_font_size = fr_common.symbol_font_size;
 
 	struct waylogout_action *action_iter;
 	fr_common.n_drawn = 0;

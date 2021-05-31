@@ -836,29 +836,23 @@ static void load_image(char *arg, struct waylogout_state *state) {
 			image->output_name ? image->output_name : "*");
 }
 
-// TODO edit/prune these
 static void set_default_colors(struct waylogout_colors *colors) {
 	colors->background = 0xFFFFFFFF;
-	colors->bs_highlight = 0xDB3300FF;
-	colors->key_highlight = 0x33DB00FF;
-	colors->caps_lock_bs_highlight = 0xDB3300FF;
-	colors->caps_lock_key_highlight = 0x33DB00FF;
-	colors->separator = 0x000000FF;
 	colors->inside = (struct waylogout_colorset){
 		.normal = 0x000000C0,
-		.highlight = 0xFA0000C0,
+		.selected = 0xFA0000C0,
 	};
 	colors->line = (struct waylogout_colorset){
 		.normal = 0x000000FF,
-		.highlight = 0x000000FF,
+		.selected = 0x000000FF,
 	};
 	colors->ring = (struct waylogout_colorset){
 		.normal = 0x337D00FF,
-		.highlight = 0x7D3300FF,
+		.selected = 0x7D3300FF,
 	};
 	colors->text = (struct waylogout_colorset){
 		.normal = 0xE5A445FF,
-		.highlight = 0x000000FF,
+		.selected = 0x000000FF,
 	};
 }
 
@@ -944,33 +938,26 @@ static void add_action(struct waylogout_state *state, char *label,
 
 }
 
-// TODO lots of editting/pruning to do here
 static int parse_options(int argc, char **argv, struct waylogout_state *state,
 		enum line_mode *line_mode, char **config_path) {
 	enum long_option_codes {
 		LO_TRACE,
-		LO_BS_HL_COLOR = 256,
-		LO_CAPS_LOCK_BS_HL_COLOR,
-		LO_CAPS_LOCK_KEY_HL_COLOR,
 		LO_FONT,
-		LO_FONT_SIZE,
+		LO_SYMBOL_FONT_SIZE,
+		LO_LABEL_FONT_SIZE,
 		LO_IND_RADIUS,
 		LO_IND_X_POSITION,
 		LO_IND_Y_POSITION,
+		LO_IND_SEP,
 		LO_IND_THICKNESS,
 		LO_INSIDE_COLOR,
-		LO_INSIDE_HIGHLIGHT_COLOR,
-		LO_KEY_HL_COLOR,
-		LO_LAYOUT_TXT_COLOR,
-		LO_LAYOUT_BG_COLOR,
-		LO_LAYOUT_BORDER_COLOR,
+		LO_INSIDE_HL_COLOR,
 		LO_LINE_COLOR,
-		LO_LINE_HIGHLIGHT_COLOR,
+		LO_LINE_HL_COLOR,
 		LO_RING_COLOR,
-		LO_RING_HIGHLIGHT_COLOR,
-		LO_SEP_COLOR,
+		LO_RING_HL_COLOR,
 		LO_TEXT_COLOR,
-		LO_TEXT_HIGHLIGHT_COLOR,
+		LO_TEXT_HL_COLOR,
 		LO_EFFECT_BLUR,
 		LO_EFFECT_PIXELATE,
 		LO_EFFECT_SCALE,
@@ -981,6 +968,7 @@ static int parse_options(int argc, char **argv, struct waylogout_state *state,
 		LO_TIME_EFFECTS,
 		LO_FADE_IN,
 		LO_LABELS,
+		LO_SELECTION_LABEL,
 		LO_HIDE_CANCEL,
 		LO_COMMAND_POWEROFF,
 		LO_COMMAND_REBOOT,
@@ -989,6 +977,7 @@ static int parse_options(int argc, char **argv, struct waylogout_state *state,
 		LO_COMMAND_LOGOUT,
 		LO_COMMAND_LOCK,
 		LO_COMMAND_SWITCH,
+		LO_COMMAND_SCROLL_SENSITIVITY,
 	};
 
 	static struct option long_options[] = {
@@ -1005,28 +994,23 @@ static int parse_options(int argc, char **argv, struct waylogout_state *state,
 		{"scaling", required_argument, NULL, 's'},
 		{"tiling", no_argument, NULL, 't'},
 		{"version", no_argument, NULL, 'v'},
-		{"bs-hl-color", required_argument, NULL, LO_BS_HL_COLOR},
-		{"caps-lock-bs-hl-color", required_argument, NULL, LO_CAPS_LOCK_BS_HL_COLOR},
-		{"caps-lock-key-hl-color", required_argument, NULL, LO_CAPS_LOCK_KEY_HL_COLOR},
+		{"selection-label", no_argument, NULL, LO_SELECTION_LABEL},
 		{"font", required_argument, NULL, LO_FONT},
-		{"font-size", required_argument, NULL, LO_FONT_SIZE},
+		{"symbol-font-size", required_argument, NULL, LO_SYMBOL_FONT_SIZE},
+		{"label-font-size", required_argument, NULL, LO_LABEL_FONT_SIZE},
 		{"indicator-radius", required_argument, NULL, LO_IND_RADIUS},
 		{"indicator-thickness", required_argument, NULL, LO_IND_THICKNESS},
 		{"indicator-x-position", required_argument, NULL, LO_IND_X_POSITION},
 		{"indicator-y-position", required_argument, NULL, LO_IND_Y_POSITION},
+		{"indicator-separation", required_argument, NULL, LO_IND_SEP},
 		{"inside-color", required_argument, NULL, LO_INSIDE_COLOR},
-		{"inside-highlight-color", required_argument, NULL, LO_INSIDE_HIGHLIGHT_COLOR},
-		{"key-hl-color", required_argument, NULL, LO_KEY_HL_COLOR},
-		{"layout-bg-color", required_argument, NULL, LO_LAYOUT_BG_COLOR},
-		{"layout-border-color", required_argument, NULL, LO_LAYOUT_BORDER_COLOR},
-		{"layout-text-color", required_argument, NULL, LO_LAYOUT_TXT_COLOR},
+		{"inside-selection-color", required_argument, NULL, LO_INSIDE_HL_COLOR},
 		{"line-color", required_argument, NULL, LO_LINE_COLOR},
-		{"line-highlight-color", required_argument, NULL, LO_LINE_HIGHLIGHT_COLOR},
+		{"line-selection-color", required_argument, NULL, LO_LINE_HL_COLOR},
 		{"ring-color", required_argument, NULL, LO_RING_COLOR},
-		{"ring-highlight-color", required_argument, NULL, LO_RING_HIGHLIGHT_COLOR},
-		{"separator-color", required_argument, NULL, LO_SEP_COLOR},
+		{"ring-selection-color", required_argument, NULL, LO_RING_HL_COLOR},
 		{"text-color", required_argument, NULL, LO_TEXT_COLOR},
-		{"text-highlight-color", required_argument, NULL, LO_TEXT_HIGHLIGHT_COLOR},
+		{"text-selection-color", required_argument, NULL, LO_TEXT_HL_COLOR},
 		{"effect-blur", required_argument, NULL, LO_EFFECT_BLUR},
 		{"effect-pixelate", required_argument, NULL, LO_EFFECT_PIXELATE},
 		{"effect-scale", required_argument, NULL, LO_EFFECT_SCALE},
@@ -1044,6 +1028,7 @@ static int parse_options(int argc, char **argv, struct waylogout_state *state,
 		{"lock-command", required_argument, NULL, LO_COMMAND_LOCK},
 		{"switch-user-command", required_argument, NULL, LO_COMMAND_SWITCH},
 		{"hide-cancel", no_argument, NULL, LO_HIDE_CANCEL},
+		{"scroll-sensitivity", required_argument, NULL, LO_COMMAND_SCROLL_SENSITIVITY},
 		{0, 0, 0, 0}
 	};
 
@@ -1060,14 +1045,6 @@ static int parse_options(int argc, char **argv, struct waylogout_state *state,
 			"Enable tracing output.\n"
 		"  --fade-in <seconds>              "
 			"Make the lock screen fade in instead of just popping in.\n"
-		"  --submit-on-touch                "
-			"Submit password in response to a touch event.\n"
-		"  --grace <seconds>                "
-			"Password grace period. Don't require the password for the first N seconds.\n"
-		"  --grace-no-mouse                 "
-			"During the grace period, don't unlock on a mouse event.\n"
-		"  --grace-no-touch                 "
-			"During the grace period, don't unlock on a touch event.\n"
 		"  -h, --help                       "
 			"Show help message and quit.\n"
 		"  -i, --image [[<output>]:]<path>  "
@@ -1080,22 +1057,16 @@ static int parse_options(int argc, char **argv, struct waylogout_state *state,
 			"Image scaling mode: stretch, fill, fit, center, tile, solid_color.\n"
 		"  -t, --tiling                     "
 			"Same as --scaling=tile.\n"
-		"  --user                           "
-			"Show name of locked user.\n"
 		"  -v, --version                    "
 			"Show the version number and quit.\n"
-		"  --bs-hl-color <color>            "
-			"Sets the color of backspace highlight segments.\n"
-		"  --caps-lock-bs-hl-color <color>  "
-			"Sets the color of backspace highlight segments when Caps Lock "
-			"is active.\n"
-		"  --caps-lock-key-hl-color <color> "
-			"Sets the color of the key press highlight segments when "
-			"Caps Lock is active.\n"
+		"  --selection-label                 "
+			"Always show label on selected action.\n"
 		"  --font <font>                    "
 			"Sets the font of the text.\n"
-		"  --font-size <size>               "
-			"Sets a fixed font size for the indicator text.\n"
+		"  --symbol-font-size <size>        "
+			"Sets a fixed font size for the action symbol.\n"
+		"  --label-font-size <size>         "
+			"Sets a fixed font size for the action label text.\n"
 		"  --hide-cancel                    "
 			"Hide the indicator for the \"cancel\" option.\n"
 		"  --indicator-radius <radius>      "
@@ -1106,59 +1077,29 @@ static int parse_options(int argc, char **argv, struct waylogout_state *state,
 			"Sets the horizontal position of the indicator.\n"
 		"  --indicator-y-position <y>       "
 			"Sets the vertical position of the indicator.\n"
+		"  --indicator-separation <sep>     "
+			"Sets a fixed amount of space separating action indicators.\n"
 		"  --inside-color <color>           "
 			"Sets the color of the inside of the indicator.\n"
-		"  --inside-highlight-color <color>     "
-			"Sets the color of the inside of the indicator when invalid.\n"
-		"  --key-hl-color <color>           "
-			"Sets the color of the key press highlight segments.\n"
-		"  --layout-bg-color <color>        "
-			"Sets the background color of the box containing the layout text.\n"
-		"  --layout-border-color <color>    "
-			"Sets the color of the border of the box containing the layout text.\n"
-		"  --layout-text-color <color>      "
-			"Sets the color of the layout text.\n"
+		"  --inside-selection-color <color>  "
+			"Sets the color of the inside of the selected action indicator.\n"
 		"  --line-color <color>             "
 			"Sets the color of the line between the inside and ring.\n"
-		"  --line-clear-color <color>       "
+		"  --line-selection-color <color>    "
 			"Sets the color of the line between the inside and ring when "
-			"cleared.\n"
-		"  --line-caps-lock-color <color>   "
-			"Sets the color of the line between the inside and ring when "
-			"Caps Lock is active.\n"
-		"  --line-ver-color <color>         "
-			"Sets the color of the line between the inside and ring when "
-			"verifying.\n"
-		"  --line-wrong-color <color>       "
-			"Sets the color of the line between the inside and ring when "
-			"invalid.\n"
+			"an action is selected.\n"
 		"  -n, --line-uses-inside           "
 			"Use the inside color for the line between the inside and ring.\n"
 		"  -r, --line-uses-ring             "
 			"Use the ring color for the line between the inside and ring.\n"
 		"  --ring-color <color>             "
 			"Sets the color of the ring of the indicator.\n"
-		"  --ring-clear-color <color>       "
-			"Sets the color of the ring of the indicator when cleared.\n"
-		"  --ring-caps-lock-color <color>   "
-			"Sets the color of the ring of the indicator when Caps Lock "
-			"is active.\n"
-		"  --ring-ver-color <color>         "
-			"Sets the color of the ring of the indicator when verifying.\n"
-		"  --ring-wrong-color <color>       "
-			"Sets the color of the ring of the indicator when invalid.\n"
-		"  --separator-color <color>        "
-			"Sets the color of the lines that separate highlight segments.\n"
+		"  --ring-selection-color <color>    "
+			"Sets the color of the ring of the selected action indicator.\n"
 		"  --text-color <color>             "
 			"Sets the color of the text.\n"
-		"  --text-clear-color <color>       "
-			"Sets the color of the text when cleared.\n"
-		"  --text-caps-lock-color <color>   "
-			"Sets the color of the text when Caps Lock is active.\n"
-		"  --text-ver-color <color>         "
-			"Sets the color of the text when verifying.\n"
-		"  --text-wrong-color <color>       "
-			"Sets the color of the text when invalid.\n"
+		"  --text-selection-color <color>    "
+			"Sets the color of the text for the selected action indicator.\n"
 		"  --effect-blur <radius>x<times>   "
 			"Blur images.\n"
 		"  --effect-pixelate <factor>       "
@@ -1173,14 +1114,30 @@ static int parse_options(int argc, char **argv, struct waylogout_state *state,
 			"Apply a custom effect from a shared object or C source file.\n"
 		"  --time-effects                   "
 			"Measure the time it takes to run each effect.\n"
+		"  --poweroff-command               "
+		    "Command to run when \"poweroff\" action is activated.\n"
+		"  --reboot-command                 "
+		    "Command to run when \"reboot\" action is activated.\n"
+		"  --suspend-command                "
+		    "Command to run when \"suspend\" action is activated.\n"
+		"  --hibernate-command              "
+		    "Command to run when \"hibernate\" action is activated.\n"
+		"  --logout-command                 "
+		    "Command to run when \"logout\" action is activated.\n"
+		"  --lock-command                   "
+		    "Command to run when \"lock\" action is activated.\n"
+		"  --switch-user-command            "
+		    "Command to run when \"switch user\" action is activated.\n"
+		"  --scroll-sensitivity             "
+		    "How fast selected action will change when scrolling with mouse/touch. "
+			"Lower is faster; default is 8.\n"
 		"\n"
 		"All <color> options are of the form <rrggbb[aa]>.\n";
-
 	int c;
 	optind = 1;
 	while (1) {
 		int opt_idx = 0;
-		c = getopt_long(argc, argv, "c:dhi:lnrSs:tvC:", long_options,
+		c = getopt_long(argc, argv, "C:c:dhi:lnrSs:tv", long_options,
 				&opt_idx);
 		if (c == -1) {
 			break;
@@ -1245,19 +1202,9 @@ static int parse_options(int argc, char **argv, struct waylogout_state *state,
 			fprintf(stdout, "waylogout version " WAYLOGOUT_VERSION "\n");
 			exit(EXIT_SUCCESS);
 			break;
-		case LO_BS_HL_COLOR:
+		case LO_SELECTION_LABEL:
 			if (state) {
-				state->args.colors.bs_highlight = parse_color(optarg);
-			}
-			break;
-		case LO_CAPS_LOCK_BS_HL_COLOR:
-			if (state) {
-				state->args.colors.caps_lock_bs_highlight = parse_color(optarg);
-			}
-			break;
-		case LO_CAPS_LOCK_KEY_HL_COLOR:
-			if (state) {
-				state->args.colors.caps_lock_key_highlight = parse_color(optarg);
+				state->args.selection_label = true;
 			}
 			break;
 		case LO_FONT:
@@ -1266,9 +1213,14 @@ static int parse_options(int argc, char **argv, struct waylogout_state *state,
 				state->args.font = strdup(optarg);
 			}
 			break;
-		case LO_FONT_SIZE:
+		case LO_SYMBOL_FONT_SIZE:
 			if (state) {
-				state->args.font_size = atoi(optarg);
+				state->args.symbol_font_size = atoi(optarg);
+			}
+			break;
+		case LO_LABEL_FONT_SIZE:
+			if (state) {
+				state->args.label_font_size = atoi(optarg);
 			}
 			break;
 		case LO_IND_RADIUS:
@@ -1293,34 +1245,19 @@ static int parse_options(int argc, char **argv, struct waylogout_state *state,
 				state->args.indicator_y_position = atoi(optarg);
 			}
 			break;
+		case LO_IND_SEP:
+			if (state) {
+				state->args.indicator_sep = atoi(optarg);
+			}
+			break;
 		case LO_INSIDE_COLOR:
 			if (state) {
 				state->args.colors.inside.normal = parse_color(optarg);
 			}
 			break;
-		case LO_INSIDE_HIGHLIGHT_COLOR:
+		case LO_INSIDE_HL_COLOR:
 			if (state) {
-				state->args.colors.inside.highlight = parse_color(optarg);
-			}
-			break;
-		case LO_KEY_HL_COLOR:
-			if (state) {
-				state->args.colors.key_highlight = parse_color(optarg);
-			}
-			break;
-		case LO_LAYOUT_BG_COLOR:
-			if (state) {
-				state->args.colors.layout_background = parse_color(optarg);
-			}
-			break;
-		case LO_LAYOUT_BORDER_COLOR:
-			if (state) {
-				state->args.colors.layout_border = parse_color(optarg);
-			}
-			break;
-		case LO_LAYOUT_TXT_COLOR:
-			if (state) {
-				state->args.colors.layout_text = parse_color(optarg);
+				state->args.colors.inside.selected = parse_color(optarg);
 			}
 			break;
 		case LO_LINE_COLOR:
@@ -1328,9 +1265,9 @@ static int parse_options(int argc, char **argv, struct waylogout_state *state,
 				state->args.colors.line.normal = parse_color(optarg);
 			}
 			break;
-		case LO_LINE_HIGHLIGHT_COLOR:
+		case LO_LINE_HL_COLOR:
 			if (state) {
-				state->args.colors.line.highlight = parse_color(optarg);
+				state->args.colors.line.selected = parse_color(optarg);
 			}
 			break;
 		case LO_RING_COLOR:
@@ -1338,14 +1275,9 @@ static int parse_options(int argc, char **argv, struct waylogout_state *state,
 				state->args.colors.ring.normal = parse_color(optarg);
 			}
 			break;
-		case LO_RING_HIGHLIGHT_COLOR:
+		case LO_RING_HL_COLOR:
 			if (state) {
-				state->args.colors.ring.highlight = parse_color(optarg);
-			}
-			break;
-		case LO_SEP_COLOR:
-			if (state) {
-				state->args.colors.separator = parse_color(optarg);
+				state->args.colors.ring.selected = parse_color(optarg);
 			}
 			break;
 		case LO_TEXT_COLOR:
@@ -1353,9 +1285,9 @@ static int parse_options(int argc, char **argv, struct waylogout_state *state,
 				state->args.colors.text.normal = parse_color(optarg);
 			}
 			break;
-		case LO_TEXT_HIGHLIGHT_COLOR:
+		case LO_TEXT_HL_COLOR:
 			if (state) {
-				state->args.colors.text.highlight = parse_color(optarg);
+				state->args.colors.text.selected = parse_color(optarg);
 			}
 			break;
 		case LO_EFFECT_BLUR:
@@ -1513,6 +1445,10 @@ static int parse_options(int argc, char **argv, struct waylogout_state *state,
 			if (state)
 				state->args.hide_cancel = true;
 			break;
+		case LO_COMMAND_SCROLL_SENSITIVITY:
+			if (state)
+				state->args.scroll_sensitivity = atoi(optarg);
+			break;
 		default:
 			fprintf(stderr, "%s", usage);
 			return 1;
@@ -1619,14 +1555,18 @@ int main(int argc, char **argv) {
 	state.args = (struct waylogout_args){
 		.mode = BACKGROUND_MODE_FILL,
 		.font = strdup("sans-serif"),
-		.font_size = 0,
+		.symbol_font_size = 0,
+		.label_font_size = 0,
 		.radius = 75,
 		.thickness = 10,
 		.indicator_x_position = 0,
 		.indicator_y_position = 0,
+		.indicator_sep = 0,
 		.override_indicator_x_position = false,
 		.override_indicator_y_position = false,
+		.scroll_sensitivity = 8,
 		.labels = false,
+		.selection_label = false,
 		.hide_cancel = false,
 		.screenshots = false,
 		.debug = false,
@@ -1683,6 +1623,8 @@ int main(int argc, char **argv) {
 	}
 
 	waylogout_log(LOG_DEBUG, "Found %d configured actions", n_actions);
+
+	state.args.scroll_sensitivity = state.args.scroll_sensitivity * 1000;
 
 	if (line_mode == LM_INSIDE) {
 		state.args.colors.line = state.args.colors.inside;

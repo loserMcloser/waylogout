@@ -94,10 +94,10 @@ void waylogout_handle_mouse_scroll(struct waylogout_state *state,
 		wl_fixed_t amount) {
 	// TODO add a "mouse scroll sensitivity" setting
 	state->scroll_amount += amount;
-	if (state->scroll_amount > 8000) {
+	if (state->scroll_amount > (int) state->args.scroll_sensitivity) {
 		select_next_action(state);
 		state->scroll_amount = 0;
-	} else if (state->scroll_amount < -8000) {
+	} else if (state->scroll_amount < -1 * ((int) state->args.scroll_sensitivity)) {
 		select_prev_action(state);
 		state->scroll_amount = 0;
 	}
@@ -131,10 +131,12 @@ void waylogout_handle_key(struct waylogout_state *state,
 	case XKB_KEY_Escape:
 		state->run_display = false;
 		break;
-	case XKB_KEY_Left:
+	case XKB_KEY_Left: /* fallthrough */
+	case XKB_KEY_Down:
 		select_prev_action(state);
 		break;
-	case XKB_KEY_Right:
+	case XKB_KEY_Right: /* fallthrough */
+	case XKB_KEY_Up:
 		select_next_action(state);
 		break;
 	case XKB_KEY_F1:

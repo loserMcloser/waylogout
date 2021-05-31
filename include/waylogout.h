@@ -14,19 +14,11 @@
 
 struct waylogout_colorset {
 	uint32_t normal;
-	uint32_t highlight;
+	uint32_t selected;
 };
 
 struct waylogout_colors {
 	uint32_t background;
-	uint32_t bs_highlight;
-	uint32_t key_highlight;
-	uint32_t caps_lock_bs_highlight;
-	uint32_t caps_lock_key_highlight;
-	uint32_t separator;
-	uint32_t layout_background;
-	uint32_t layout_border;
-	uint32_t layout_text;
 	struct waylogout_colorset inside;
 	struct waylogout_colorset line;
 	struct waylogout_colorset ring;
@@ -37,15 +29,18 @@ struct waylogout_args {
 	struct waylogout_colors colors;
 	enum background_mode mode;
 	char *font;
-	uint32_t font_size;
+	uint32_t symbol_font_size;
+	uint32_t label_font_size;
 	uint32_t radius;
 	uint32_t thickness;
 	uint32_t indicator_x_position;
 	uint32_t indicator_y_position;
 	uint32_t indicator_sep;
+	uint32_t scroll_sensitivity;
 	bool override_indicator_x_position;
 	bool override_indicator_y_position;
 	bool labels;
+	bool selection_label;
 	bool hide_cancel;
 	bool debug;
 
@@ -142,7 +137,9 @@ struct waylogout_frame_common {
 	uint32_t x_center;
 	uint32_t y_center;
 	uint32_t n_drawn;
-	double font_size;
+	double symbol_font_size;
+	double selected_symbol_font_size;
+	double label_font_size;
 };
 
 void waylogout_handle_key(struct waylogout_state *state,
