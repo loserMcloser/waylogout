@@ -130,6 +130,7 @@ struct waylogout_image {
 struct waylogout_frame_common {
 	uint32_t arc_radius;
 	uint32_t arc_thickness;
+	uint32_t line_width;
 	uint32_t inner_radius;
 	uint32_t outer_radius;
 	uint32_t indicator_diameter;

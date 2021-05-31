@@ -222,7 +222,7 @@ void render_frame(struct waylogout_action *action,
 
 	// Draw inner + outer border of the circle
 	set_color_for_state(cairo, selected, &state->args.colors.line);
-	cairo_set_line_width(cairo, 2.0 * surface->scale);
+	cairo_set_line_width(cairo, fr_common.line_width);
 	cairo_arc(cairo, relative_xcenter, relative_ycenter,
 			fr_common.inner_radius, 0, 2 * M_PI);
 	cairo_stroke(cairo);
@@ -252,9 +252,12 @@ void render_frames(struct waylogout_surface *surface) {
 	struct waylogout_frame_common fr_common;
 	fr_common.arc_radius = state->args.radius * surface->scale;
 	fr_common.arc_thickness = state->args.thickness * surface->scale;
+	fr_common.line_width = 2.0 * surface->scale;
 	fr_common.inner_radius = fr_common.arc_radius - fr_common.arc_thickness / 2;
 	fr_common.outer_radius = fr_common.arc_radius + fr_common.arc_thickness / 2;
-	fr_common.indicator_diameter = fr_common.arc_radius * 2 + fr_common.arc_thickness;
+
+	fr_common.indicator_diameter = fr_common.arc_radius * 2
+			+ fr_common.arc_thickness + fr_common.line_width;
 
 	int n_actions = wl_list_length(&state->actions);
 	int indicator_sep = (state->args.indicator_sep > 0)
