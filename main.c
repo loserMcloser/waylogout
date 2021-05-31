@@ -14,6 +14,7 @@
 #include <time.h>
 #include <unistd.h>
 #include <wayland-client.h>
+#include <wayland-cursor.h>
 #include <wordexp.h>
 #include "background-image.h"
 #include "cairo.h"
@@ -278,6 +279,17 @@ static void create_layer_surface(struct waylogout_surface *surface) {
 	surface->events_pending += 1;
 
 	wl_surface_commit(surface->surface);
+}
+
+static void create_cursor_surface(struct waylogout_state *state) {
+	struct wl_cursor_theme *cursor_theme = wl_cursor_theme_load(NULL, 24, state->shm);
+	struct wl_cursor *cursor = wl_cursor_theme_get_cursor(cursor_theme, "left_ptr");
+	state->cursor_image = cursor->images[0];
+	struct wl_buffer *cursor_buffer = wl_cursor_image_get_buffer(state->cursor_image);
+
+	state->cursor_surface = wl_compositor_create_surface(state->compositor);
+	wl_surface_attach(state->cursor_surface, cursor_buffer, 0, 0);
+	wl_surface_commit(state->cursor_surface);
 }
 
 static void initially_render_surface(struct waylogout_surface *surface) {
@@ -1659,6 +1671,8 @@ int main(int argc, char **argv) {
 			wl_display_roundtrip(state.display);
 		}
 	}
+
+	create_cursor_surface(&state);
 
 	state.eventloop = loop_create();
 	loop_add_fd(state.eventloop, wl_display_get_fd(state.display), POLLIN,

@@ -3,6 +3,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <wayland-client.h>
+#include <wayland-cursor.h>
 #include "background-image.h"
 #include "cairo.h"
 #include "pool-buffer.h"
@@ -72,6 +73,8 @@ struct waylogout_state {
 	struct wl_shm *shm;
 	struct wl_list surfaces;
 	struct wl_list images;
+	struct wl_surface *cursor_surface;
+	struct wl_cursor_image *cursor_image;
 	struct waylogout_args args;
 	struct wl_list actions;
 	struct waylogout_action *selected_action;

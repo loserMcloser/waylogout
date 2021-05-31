@@ -129,6 +129,9 @@ static void wl_pointer_enter(void *data, struct wl_pointer *wl_pointer,
 		uint32_t serial, struct wl_surface *surface,
 		wl_fixed_t surface_x, wl_fixed_t surface_y) {
 	//wl_pointer_set_cursor(wl_pointer, serial, NULL, 0, 0);
+	struct waylogout_state *state = (struct waylogout_state *)data;
+	wl_pointer_set_cursor(wl_pointer, serial, state->cursor_surface,
+			state->cursor_image->hotspot_x, state->cursor_image->hotspot_y);
 }
 
 static void wl_pointer_leave(void *data, struct wl_pointer *wl_pointer,
