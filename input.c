@@ -12,6 +12,32 @@
 #include "unicode.h"
 #include "log.h"
 
+void select_next_action(struct waylogout_state *state) {
+	struct wl_list *selection;
+	if (state->selected_action) {
+		selection = state->selected_action->link.next;
+		if (selection == &state->actions)
+			selection = state->actions.next;
+	} else
+		selection = state->actions.next;
+	state->selected_action =
+			wl_container_of(selection, state->selected_action, link);
+	damage_state(state);
+}
+
+void select_prev_action(struct waylogout_state *state) {
+	struct wl_list *selection;
+	if (state->selected_action) {
+		selection = state->selected_action->link.prev;
+		if (selection == &state->actions)
+			selection = state->actions.prev;
+	} else
+		selection = state->actions.prev;
+	state->selected_action =
+			wl_container_of(selection, state->selected_action, link);
+	damage_state(state);
+}
+
 void mouse_enter_motion_selection(struct waylogout_state *state,
 		struct waylogout_action *action, int x, int y) {
 	int x_diff = (x - action->indicator_width / 2);
@@ -64,6 +90,19 @@ void waylogout_handle_mouse_motion(struct waylogout_state *state,
 		}
 }
 
+void waylogout_handle_mouse_scroll(struct waylogout_state *state,
+		wl_fixed_t amount) {
+	// TODO add a "mouse scroll sensitivity" setting
+	state->scroll_amount += amount;
+	if (state->scroll_amount > 8000) {
+		select_next_action(state);
+		state->scroll_amount = 0;
+	} else if (state->scroll_amount < -8000) {
+		select_prev_action(state);
+		state->scroll_amount = 0;
+	}
+}
+
 void waylogout_handle_mouse(struct waylogout_state *state) {
 	// if (state->auth_state == AUTH_STATE_GRACE && !state->args.password_grace_no_mouse) {
 	// 	state->run_display = false;
@@ -82,7 +121,6 @@ void waylogout_handle_touch(struct waylogout_state *state) {
 void waylogout_handle_key(struct waylogout_state *state,
 		xkb_keysym_t keysym, uint32_t codepoint) {
 
-	struct wl_list *selection;
 	struct waylogout_action *action_iter;
 
 	switch (keysym) {
@@ -94,24 +132,10 @@ void waylogout_handle_key(struct waylogout_state *state,
 		state->run_display = false;
 		break;
 	case XKB_KEY_Left:
-		if (state->selected_action) {
-			selection = state->selected_action->link.prev;
-			if (selection == &state->actions)
-				selection = state->actions.prev;
-		} else
-			selection = state->actions.prev;
-		state->selected_action = wl_container_of(selection, action_iter, link);
-		damage_state(state);
+		select_prev_action(state);
 		break;
 	case XKB_KEY_Right:
-		if (state->selected_action) {
-			selection = state->selected_action->link.next;
-			if (selection == &state->actions)
-				selection = state->actions.next;
-		} else
-			selection = state->actions.next;
-		state->selected_action = wl_container_of(selection, action_iter, link);
-		damage_state(state);
+		select_next_action(state);
 		break;
 	case XKB_KEY_F1:
 		codepoint = 1;

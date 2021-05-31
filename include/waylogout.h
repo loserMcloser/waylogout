@@ -88,6 +88,7 @@ struct waylogout_state {
 	struct wl_list actions;
 	struct waylogout_action *selected_action;
 	struct waylogout_action *hovered_action;
+	wl_fixed_t scroll_amount;
 	struct waylogout_xkb xkb;
 	int render_randnum;
 	size_t n_screenshots_done;
@@ -156,6 +157,8 @@ void waylogout_handle_mouse_leave(struct waylogout_state *state,
 		struct wl_surface *surface);
 void waylogout_handle_mouse_motion(struct waylogout_state *state,
 		wl_fixed_t x, wl_fixed_t y);
+void waylogout_handle_mouse_scroll(struct waylogout_state *state,
+		wl_fixed_t amount);
 void render_frame_background(struct waylogout_surface *surface);
 void render_background_fade(struct waylogout_surface *surface, uint32_t time);
 void render_background_fade_prepare(struct waylogout_surface *surface, struct pool_buffer *buffer);

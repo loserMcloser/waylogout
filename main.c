@@ -1639,6 +1639,7 @@ int main(int argc, char **argv) {
 
 	state.selected_action = NULL;
 	state.hovered_action = NULL;
+	state.scroll_amount = 0;
 	wl_list_init(&state.actions);
 
 	char *config_path = NULL;

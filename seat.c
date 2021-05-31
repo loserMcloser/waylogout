@@ -152,7 +152,8 @@ static void wl_pointer_button(void *data, struct wl_pointer *wl_pointer,
 
 static void wl_pointer_axis(void *data, struct wl_pointer *wl_pointer,
 		uint32_t time, uint32_t axis, wl_fixed_t value) {
-	waylogout_handle_mouse((struct waylogout_state *)data);
+	waylogout_handle_mouse_scroll((struct waylogout_state *)data,
+			(axis ? 1 : -1) * value);
 }
 
 static void wl_pointer_frame(void *data, struct wl_pointer *wl_pointer) {
