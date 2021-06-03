@@ -1,17 +1,8 @@
-#include <assert.h>
-#include <errno.h>
-#include <pwd.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
 #include <xkbcommon/xkbcommon.h>
 #include <linux/input-event-codes.h>
-#include "log.h"
 #include "loop.h"
 #include "seat.h"
 #include "waylogout.h"
-#include "unicode.h"
-#include "log.h"
 
 void run_action(struct waylogout_action *action) {
 	if (!action)

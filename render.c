@@ -1,12 +1,7 @@
-#include <math.h>
-#include <stdlib.h>
-#include <time.h>
-#include <locale.h>
 #include <wayland-client.h>
 #include "cairo.h"
 #include "background-image.h"
 #include "waylogout.h"
-#include "log.h"
 
 #define M_PI 3.14159265358979323846
 

@@ -1,7 +1,5 @@
 #include <assert.h>
-#include <stdlib.h>
 #include <sys/mman.h>
-#include <unistd.h>
 #include <xkbcommon/xkbcommon.h>
 #include "log.h"
 #include "waylogout.h"

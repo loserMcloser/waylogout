@@ -157,7 +157,6 @@ sources = [
 	'pool-buffer.c',
 	'render.c',
 	'seat.c',
-	'unicode.c',
 	'effects.c',
 	'fade.c',
 ]
