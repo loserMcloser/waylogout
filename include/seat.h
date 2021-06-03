@@ -8,8 +8,7 @@ struct loop;
 struct loop_timer;
 
 struct waylogout_xkb {
-	bool caps_lock;
-	bool control;
+	// bool shift;
 	struct xkb_state *state;
 	struct xkb_context *context;
 	struct xkb_keymap *keymap;

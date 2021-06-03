@@ -96,6 +96,8 @@ void render_frame(struct waylogout_action *action,
 		struct waylogout_frame_common fr_common) {
 	struct waylogout_state *state = surface->state;
 
+	bool selected = (action == state->selected_action);
+
 	int buffer_width = action->indicator_width;
 	int buffer_height = action->indicator_height;
 	int new_width = fr_common.indicator_diameter;
@@ -109,6 +111,12 @@ void render_frame(struct waylogout_action *action,
 
 	int subsurf_ycenter = fr_common.y_center -
 			(state->args.radius + state->args.thickness);
+
+	if (selected && state->hover.mouse_down &&
+			state->hover.action == state->selected_action) {
+		subsurf_xcenter += 2;
+		subsurf_ycenter += 2;
+	}
 
 	wl_subsurface_set_position(action->subsurface, subsurf_xcenter, subsurf_ycenter);
 
@@ -139,8 +147,6 @@ void render_frame(struct waylogout_action *action,
 	cairo_set_operator(cairo, CAIRO_OPERATOR_SOURCE);
 	cairo_paint(cairo);
 	cairo_restore(cairo);
-
-	bool selected = (action == state->selected_action);
 
 	double relative_xcenter = buffer_width / 2.0f;
 	double relative_ycenter = fr_common.indicator_diameter / 2.0f;

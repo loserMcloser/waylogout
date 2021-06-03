@@ -862,15 +862,32 @@ enum line_mode {
 	LM_RING,
 };
 
-static void add_action(struct waylogout_state *state, char *label,
-		char *symbol, char *command, xkb_keysym_t shortcut) {
+static void add_action(struct waylogout_state *state,
+		enum waylogout_action_type type, char *label, char *symbol,
+		char *command, xkb_keysym_t shortcut) {
+
+	struct waylogout_action *action_iter;
+	wl_list_for_each(action_iter, &state->actions, link)
+		if (type == action_iter->type)
+			return;
 
 	struct waylogout_action *new_action = malloc(sizeof(struct waylogout_action));
 
+	new_action->type = type;
 	new_action->label = strdup(label);
 	strncpy(new_action->symbol, symbol, 4);
-	if (command)
-		new_action->command = strdup(command);
+	if (command) {
+		char* cmd = command;
+		if (strlen(command) > 1)
+			if (
+			     (command[0] == '"' && command[strlen(command)-1] == '"')
+			  || (command[0] == '\'' && command[strlen(command)-1] == '\'')
+			) {
+				command[strlen(command)-1] = '\0';
+				cmd = &command[1];
+			}
+		new_action->command = strdup(cmd);
+	}
 	new_action->shortcut = shortcut;
 
 	for (size_t i = 0; i < 2; ++i)
@@ -1043,8 +1060,6 @@ static int parse_options(int argc, char **argv, struct waylogout_state *state,
 			"Enable debugging output.\n"
 		"  -t, --trace                      "
 			"Enable tracing output.\n"
-		"  --fade-in <seconds>              "
-			"Make the lock screen fade in instead of just popping in.\n"
 		"  -h, --help                       "
 			"Show help message and quit.\n"
 		"  -i, --image [[<output>]:]<path>  "
@@ -1059,41 +1074,41 @@ static int parse_options(int argc, char **argv, struct waylogout_state *state,
 			"Same as --scaling=tile.\n"
 		"  -v, --version                    "
 			"Show the version number and quit.\n"
+		"  --fade-in <seconds>              "
+			"Make the logout screen fade in instead of just popping in.\n"
 		"  --selection-label                 "
 			"Always show label on selected action.\n"
 		"  --font <font>                    "
-			"Sets the font of the text.\n"
-		"  --symbol-font-size <size>        "
-			"Sets a fixed font size for the action symbol.\n"
+			"Sets the font of the action label text.\n"
 		"  --label-font-size <size>         "
 			"Sets a fixed font size for the action label text.\n"
-		"  --hide-cancel                    "
-			"Hide the indicator for the \"cancel\" option.\n"
+		"  --symbol-font-size <size>        "
+			"Sets a fixed font size for the action symbol.\n"
 		"  --indicator-radius <radius>      "
-			"Sets the indicator radius.\n"
+			"Sets the action indicator radius.\n"
 		"  --indicator-thickness <thick>    "
-			"Sets the indicator thickness.\n"
+			"Sets the action indicator thickness.\n"
 		"  --indicator-x-position <x>       "
-			"Sets the horizontal position of the indicator.\n"
+			"Sets the horizontal centre position of the action indicator array.\n"
 		"  --indicator-y-position <y>       "
-			"Sets the vertical position of the indicator.\n"
+			"Sets the vertical centre position of the action indicator array.\n"
 		"  --indicator-separation <sep>     "
 			"Sets a fixed amount of space separating action indicators.\n"
 		"  --inside-color <color>           "
-			"Sets the color of the inside of the indicator.\n"
+			"Sets the color of the inside of the action indicators.\n"
 		"  --inside-selection-color <color>  "
 			"Sets the color of the inside of the selected action indicator.\n"
 		"  --line-color <color>             "
 			"Sets the color of the line between the inside and ring.\n"
 		"  --line-selection-color <color>    "
-			"Sets the color of the line between the inside and ring when "
-			"an action is selected.\n"
+			"Sets the color of the line between the inside and ring in "
+			"the selected action indicator.\n"
 		"  -n, --line-uses-inside           "
 			"Use the inside color for the line between the inside and ring.\n"
 		"  -r, --line-uses-ring             "
 			"Use the ring color for the line between the inside and ring.\n"
 		"  --ring-color <color>             "
-			"Sets the color of the ring of the indicator.\n"
+			"Sets the color of the ring of the action indicators.\n"
 		"  --ring-selection-color <color>    "
 			"Sets the color of the ring of the selected action indicator.\n"
 		"  --text-color <color>             "
@@ -1114,21 +1129,23 @@ static int parse_options(int argc, char **argv, struct waylogout_state *state,
 			"Apply a custom effect from a shared object or C source file.\n"
 		"  --time-effects                   "
 			"Measure the time it takes to run each effect.\n"
-		"  --poweroff-command               "
+		"  --poweroff-command <command>     "
 		    "Command to run when \"poweroff\" action is activated.\n"
-		"  --reboot-command                 "
+		"  --reboot-command <command>       "
 		    "Command to run when \"reboot\" action is activated.\n"
-		"  --suspend-command                "
+		"  --suspend-command <command>      "
 		    "Command to run when \"suspend\" action is activated.\n"
-		"  --hibernate-command              "
+		"  --hibernate-command <command>    "
 		    "Command to run when \"hibernate\" action is activated.\n"
-		"  --logout-command                 "
+		"  --logout-command <command>       "
 		    "Command to run when \"logout\" action is activated.\n"
-		"  --lock-command                   "
+		"  --lock-command <command>         "
 		    "Command to run when \"lock\" action is activated.\n"
-		"  --switch-user-command            "
+		"  --switch-user-command <command>  "
 		    "Command to run when \"switch user\" action is activated.\n"
-		"  --scroll-sensitivity             "
+		"  --hide-cancel                    "
+			"Hide the indicator for the \"cancel\" option.\n"
+		"  --scroll-sensitivity <amount>    "
 		    "How fast selected action will change when scrolling with mouse/touch. "
 			"Lower is faster; default is 8.\n"
 		"\n"
@@ -1375,6 +1392,7 @@ static int parse_options(int argc, char **argv, struct waylogout_state *state,
 			if (state)
 				add_action(
 				  state,
+				  WL_ACTION_POWEROFF,
 				  "power off",
 				  "",
 				  optarg,
@@ -1385,6 +1403,7 @@ static int parse_options(int argc, char **argv, struct waylogout_state *state,
 			if (state)
 				add_action(
 				  state,
+				  WL_ACTION_REBOOT,
 				  "reboot",
 				  "",
 				  optarg,
@@ -1395,6 +1414,7 @@ static int parse_options(int argc, char **argv, struct waylogout_state *state,
 			if (state)
 				add_action(
 				  state,
+				  WL_ACTION_SUSPEND,
 				  "sleep",
 				  "",
 				  optarg,
@@ -1405,6 +1425,7 @@ static int parse_options(int argc, char **argv, struct waylogout_state *state,
 			if (state)
 				add_action(
 				  state,
+				  WL_ACTION_HIBERNATE,
 				  "hibernate",
 				  "",
 				  optarg,
@@ -1415,6 +1436,7 @@ static int parse_options(int argc, char **argv, struct waylogout_state *state,
 			if (state)
 				add_action(
 				  state,
+				  WL_ACTION_LOGOUT,
 				  "logout",
 				  "",
 				  optarg,
@@ -1425,6 +1447,7 @@ static int parse_options(int argc, char **argv, struct waylogout_state *state,
 			if (state)
 				add_action(
 				  state,
+				  WL_ACTION_LOCK,
 				  "lock",
 				  "",
 				  optarg,
@@ -1435,6 +1458,7 @@ static int parse_options(int argc, char **argv, struct waylogout_state *state,
 			if (state)
 				add_action(
 				  state,
+				  WL_ACTION_SWITCH,
 				  "switch user",
 				  "",
 				  optarg,
@@ -1578,7 +1602,10 @@ int main(int argc, char **argv) {
 	set_default_colors(&state.args.colors);
 
 	state.selected_action = NULL;
-	state.hovered_action = NULL;
+	state.hover.action = NULL;
+	state.hover.mouse_down = false;
+	state.touch.action = NULL;
+	state.touch.id = 0;
 	state.scroll_amount = 0;
 	wl_list_init(&state.actions);
 
@@ -1612,7 +1639,7 @@ int main(int argc, char **argv) {
 	}
 
 	if (!state.args.hide_cancel)
-		add_action(&state, "cancel", "", NULL, XKB_KEY_c);
+		add_action(&state, WL_ACTION_CANCEL, "cancel", "", NULL, XKB_KEY_c);
 
 	int n_actions = wl_list_length(&state.actions);
 	int n_non_cancel_actions = n_actions - (!state.args.hide_cancel);

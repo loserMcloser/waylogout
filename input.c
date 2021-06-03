@@ -5,12 +5,20 @@
 #include <string.h>
 #include <unistd.h>
 #include <xkbcommon/xkbcommon.h>
+#include <linux/input-event-codes.h>
 #include "log.h"
 #include "loop.h"
 #include "seat.h"
 #include "waylogout.h"
 #include "unicode.h"
 #include "log.h"
+
+void run_action(struct waylogout_action *action) {
+	if (!action)
+		return;
+	char *const cmd[] = { "sh", "-c", action->command, NULL, };
+	execvp(cmd[0], cmd);
+}
 
 void select_next_action(struct waylogout_state *state) {
 	struct wl_list *selection;
@@ -59,7 +67,7 @@ void waylogout_handle_mouse_enter(struct waylogout_state *state,
 	struct waylogout_action *action_iter;
 	wl_list_for_each(action_iter, &state->actions, link)
 		if (surface == action_iter->child_surface) {
-			state->hovered_action = action_iter;
+			state->hover.action = action_iter;
 			mouse_enter_motion_selection(state, action_iter,
 					wl_fixed_to_int(x), wl_fixed_to_int(y));
 			break;
@@ -71,10 +79,14 @@ void waylogout_handle_mouse_leave(struct waylogout_state *state,
 	struct waylogout_action *action_iter;
 	wl_list_for_each(action_iter, &state->actions, link)
 		if (surface == action_iter->child_surface) {
-			if (action_iter == state->hovered_action)
-				state->hovered_action = NULL;
-			if (action_iter == state->selected_action)
+			if (action_iter == state->hover.action) {
+				state->hover.action = NULL;
+				state->hover.mouse_down = false;
+			}
+			if (action_iter == state->selected_action) {
 				state->selected_action = NULL;
+				damage_state(state);
+			}
 			break;
 		}
 }
@@ -83,7 +95,7 @@ void waylogout_handle_mouse_motion(struct waylogout_state *state,
 		wl_fixed_t x, wl_fixed_t y) {
 	struct waylogout_action *action_iter;
 	wl_list_for_each(action_iter, &state->actions, link)
-		if (action_iter == state->hovered_action) {
+		if (action_iter == state->hover.action) {
 			mouse_enter_motion_selection(state, action_iter,
 					wl_fixed_to_int(x), wl_fixed_to_int(y));
 			break;
@@ -92,7 +104,6 @@ void waylogout_handle_mouse_motion(struct waylogout_state *state,
 
 void waylogout_handle_mouse_scroll(struct waylogout_state *state,
 		wl_fixed_t amount) {
-	// TODO add a "mouse scroll sensitivity" setting
 	state->scroll_amount += amount;
 	if (state->scroll_amount > (int) state->args.scroll_sensitivity) {
 		select_next_action(state);
@@ -103,19 +114,51 @@ void waylogout_handle_mouse_scroll(struct waylogout_state *state,
 	}
 }
 
-void waylogout_handle_mouse(struct waylogout_state *state) {
-	// if (state->auth_state == AUTH_STATE_GRACE && !state->args.password_grace_no_mouse) {
-	// 	state->run_display = false;
-	// }
+void waylogout_handle_mouse_button(struct waylogout_state *state,
+			uint32_t button, uint32_t btn_state) {
+	if (button == BTN_LEFT) {
+		if (state->hover.action && state->hover.action == state->selected_action) {
+			if (btn_state) {  // pressed
+				state->hover.mouse_down = true;
+				damage_state(state);
+			} else {
+				state->hover.mouse_down = false;
+				damage_state(state);
+				run_action(state->selected_action); // just returns if selected_action is NULL
+			}
+		}
+	} else if (button == BTN_MIDDLE && state->selected_action)
+		run_action(state->selected_action); // just returns if selected_action is NULL
 }
 
-// TODO handle touch "clicks"
-void waylogout_handle_touch(struct waylogout_state *state) {
-	// if (state->auth_state == AUTH_STATE_GRACE && !state->args.password_grace_no_touch) {
-	// 	state->run_display = false;
-	// } else if (state->auth_state != AUTH_STATE_VALIDATING && state->args.password_submit_on_touch) {
-	// 	submit_password(state);
-	// }
+void waylogout_handle_touch_down(struct waylogout_state *state,
+		struct wl_surface *surface, int32_t id, wl_fixed_t x, wl_fixed_t y) {
+	struct waylogout_action *action_iter;
+	wl_list_for_each(action_iter, &state->actions, link)
+		if (surface == action_iter->child_surface) {
+			state->touch = (struct waylogout_touch) {
+				.action = action_iter,
+				.id = id
+			};
+			mouse_enter_motion_selection(state, action_iter,
+					wl_fixed_to_int(x), wl_fixed_to_int(y));
+			break;
+		}
+}
+
+void waylogout_handle_touch_up(struct waylogout_state *state, int32_t id) {
+	if (id != state->touch.id)
+		return;
+	if (state->selected_action == state->touch.action)
+		run_action(state->selected_action);
+}
+
+void waylogout_handle_touch_motion(struct waylogout_state *state,
+		int32_t id, wl_fixed_t x, wl_fixed_t y) {
+	if (id != state->touch.id)
+		return;
+	mouse_enter_motion_selection(state, state->touch.action,
+			wl_fixed_to_int(x), wl_fixed_to_int(y));
 }
 
 void waylogout_handle_key(struct waylogout_state *state,
@@ -126,17 +169,19 @@ void waylogout_handle_key(struct waylogout_state *state,
 	switch (keysym) {
 	case XKB_KEY_KP_Enter: /* fallthrough */
 	case XKB_KEY_Return:
-		// TODO activate selected action
+		run_action(state->selected_action); // just returns if selected_action is NULL
 		break;
 	case XKB_KEY_Escape:
 		state->run_display = false;
 		break;
 	case XKB_KEY_Left: /* fallthrough */
-	case XKB_KEY_Down:
+	case XKB_KEY_Down: /* fallthrough */
+	case XKB_KEY_ISO_Left_Tab:
 		select_prev_action(state);
 		break;
 	case XKB_KEY_Right: /* fallthrough */
-	case XKB_KEY_Up:
+	case XKB_KEY_Up:    /* fallthrough */
+	case XKB_KEY_Tab:
 		select_next_action(state);
 		break;
 	case XKB_KEY_F1:

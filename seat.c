@@ -86,22 +86,11 @@ static void keyboard_modifiers(void *data, struct wl_keyboard *wl_keyboard,
 		uint32_t mods_locked, uint32_t group) {
 	struct waylogout_seat *seat = data;
 	struct waylogout_state *state = seat->state;
-	int layout_same = xkb_state_layout_index_is_active(state->xkb.state,
-		group, XKB_STATE_LAYOUT_EFFECTIVE);
-	if (!layout_same) {
-		damage_state(state);
-	}
 	xkb_state_update_mask(state->xkb.state,
 		mods_depressed, mods_latched, mods_locked, 0, 0, group);
-	int caps_lock = xkb_state_mod_name_is_active(state->xkb.state,
-		XKB_MOD_NAME_CAPS, XKB_STATE_MODS_LOCKED);
-	if (caps_lock != state->xkb.caps_lock) {
-		state->xkb.caps_lock = caps_lock;
-		damage_state(state);
-	}
-	state->xkb.control = xkb_state_mod_name_is_active(state->xkb.state,
-		XKB_MOD_NAME_CTRL,
-		XKB_STATE_MODS_DEPRESSED | XKB_STATE_MODS_LATCHED);
+	// state->xkb.shift = xkb_state_mod_name_is_active(state->xkb.state,
+	// 	XKB_MOD_NAME_SHIFT,
+	// 	XKB_STATE_MODS_DEPRESSED | XKB_STATE_MODS_LATCHED);
 }
 
 static void keyboard_repeat_info(void *data, struct wl_keyboard *wl_keyboard,
@@ -147,7 +136,8 @@ static void wl_pointer_motion(void *data, struct wl_pointer *wl_pointer,
 
 static void wl_pointer_button(void *data, struct wl_pointer *wl_pointer,
 		uint32_t serial, uint32_t time, uint32_t button, uint32_t state) {
-	waylogout_handle_mouse((struct waylogout_state *)data);
+	waylogout_handle_mouse_button((struct waylogout_state *)data,
+			button, state);
 }
 
 static void wl_pointer_axis(void *data, struct wl_pointer *wl_pointer,
@@ -189,17 +179,17 @@ static const struct wl_pointer_listener pointer_listener = {
 
 static void wl_touch_down(void *data, struct wl_touch *touch, uint32_t serial,
 		uint32_t time, struct wl_surface *surface, int32_t id, wl_fixed_t x, wl_fixed_t y) {
-	waylogout_handle_touch((struct waylogout_state *)data);
+	waylogout_handle_touch_down((struct waylogout_state *)data, surface, id, x, y);
 }
 
 static void wl_touch_up(void *data, struct wl_touch *touch, uint32_t serial,
 		uint32_t time, int32_t id) {
-	// Who cares
+	waylogout_handle_touch_up((struct waylogout_state *)data, id);
 }
 
 static void wl_touch_motion(void *data, struct wl_touch *touch, uint32_t time,
 		int32_t id, wl_fixed_t x, wl_fixed_t y) {
-	waylogout_handle_touch((struct waylogout_state *)data);
+	waylogout_handle_touch_motion((struct waylogout_state *)data, id, x, y);
 }
 
 static void wl_touch_frame(void *data, struct wl_touch *touch) {

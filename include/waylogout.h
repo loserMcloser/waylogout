@@ -53,7 +53,19 @@ struct waylogout_args {
 
 struct waylogout_surface;
 
+enum waylogout_action_type {
+	WL_ACTION_POWEROFF,
+	WL_ACTION_REBOOT,
+	WL_ACTION_SUSPEND,
+	WL_ACTION_HIBERNATE,
+	WL_ACTION_LOGOUT,
+	WL_ACTION_LOCK,
+	WL_ACTION_SWITCH,
+	WL_ACTION_CANCEL
+};
+
 struct waylogout_action {
+	enum waylogout_action_type type;
 	char *label;
 	char symbol[8];
 	char *command;
@@ -64,6 +76,16 @@ struct waylogout_action {
 	struct pool_buffer indicator_buffers[2];
 	uint32_t indicator_width, indicator_height;
 	struct wl_list link;
+};
+
+struct waylogout_touch {
+	struct waylogout_action *action;
+	int32_t id;
+};
+
+struct waylogout_hover {
+	struct waylogout_action *action;
+	bool mouse_down;
 };
 
 struct waylogout_state {
@@ -82,7 +104,8 @@ struct waylogout_state {
 	struct waylogout_args args;
 	struct wl_list actions;
 	struct waylogout_action *selected_action;
-	struct waylogout_action *hovered_action;
+	struct waylogout_hover hover;
+	struct waylogout_touch touch;
 	wl_fixed_t scroll_amount;
 	struct waylogout_xkb xkb;
 	int render_randnum;
@@ -143,12 +166,9 @@ struct waylogout_frame_common {
 	double label_font_size;
 };
 
+
 void waylogout_handle_key(struct waylogout_state *state,
 		xkb_keysym_t keysym, uint32_t codepoint);
-/////// TODO get rid of these
-void waylogout_handle_mouse(struct waylogout_state *state);
-void waylogout_handle_touch(struct waylogout_state *state);
-/////////////////////////////
 void waylogout_handle_mouse_enter(struct waylogout_state *state,
 		struct wl_surface *surface, wl_fixed_t x, wl_fixed_t y);
 void waylogout_handle_mouse_leave(struct waylogout_state *state,
@@ -157,6 +177,16 @@ void waylogout_handle_mouse_motion(struct waylogout_state *state,
 		wl_fixed_t x, wl_fixed_t y);
 void waylogout_handle_mouse_scroll(struct waylogout_state *state,
 		wl_fixed_t amount);
+void waylogout_handle_mouse_button(struct waylogout_state *state,
+		uint32_t button, uint32_t btn_state);
+void waylogout_handle_touch_down(struct waylogout_state *state,
+		struct wl_surface *surface, int32_t id, wl_fixed_t x, wl_fixed_t y);
+void waylogout_handle_touch_up(struct waylogout_state *state, int32_t id);
+void waylogout_handle_touch_motion(struct waylogout_state *state,
+		int32_t id, wl_fixed_t x, wl_fixed_t y);
+
+
+
 void render_frame_background(struct waylogout_surface *surface);
 void render_background_fade(struct waylogout_surface *surface, uint32_t time);
 void render_background_fade_prepare(struct waylogout_surface *surface, struct pool_buffer *buffer);
@@ -166,8 +196,5 @@ void render_frame(struct waylogout_action *action,
 void render_frames(struct waylogout_surface *surface);
 void damage_surface(struct waylogout_surface *surface);
 void damage_state(struct waylogout_state *state);
-
-// TODO get rid of this
-void schedule_indicator_clear(struct waylogout_state *state);
 
 #endif

@@ -1,26 +1,39 @@
 # waylogout
 
-waylogout is graphical logout/suspend/reboot/shutdown utility inspired by
+waylogout is graphical logout/suspend/reboot/shutdown utility for wayland
+inspired by
 [oblogout](https://launchpad.net/oblogout)
 and based on code from
 [swaylock-effects](https://github.com/mortie/swaylock-effects).
 
 TODO screenshot
 
-## Example Command TODO
+## Example Command
+
+This is the command used to make the screenshot.
 
 	waylogout \
+		--hide-cancel \
 		--screenshots \
-		--indicator-radius 100 \
-		--indicator-thickness 7 \
-		--effect-blur 7x5 \
-		--effect-vignette 0.5:0.5 \
-		--ring-color bb00cc \
-		--key-hl-color 880033 \
-		--line-color 00000000 \
-		--inside-color 00000088 \
-		--separator-color 00000000 \
-		--fade-in 0.2
+		--font="Baloo 2" \
+		--effect-blur=7x5 \
+		--indicator-thickness=20 \
+		--ring-color=888888aa \
+		--inside-color=88888866 \
+		--text-color=eaeaeaaa \
+		--line-color=00000000 \
+		--ring-selection-color=33cc33aa \
+		--inside-selection-color=33cc3366 \
+		--text-selection-color=eaeaeaaa \
+		--line-selection-color=00000000 \
+		--lock-command="echo lock" \
+		--logout-command="echo logout" \
+		--suspend-command="echo suspend" \
+		--hibernate-command="echo hibernate" \
+		--poweroff-command="echo poweroff" \
+		--reboot-command="echo reboot" \
+		--switch-user-command="echo switch" \
+		--selection-label
 
 ## Installation
 
@@ -38,13 +51,16 @@ Install dependencies:
 * libxkbcommon
 * cairo
 * gdk-pixbuf2 \*\*
-* [scdoc](https://git.sr.ht/~sircmpwn/scdoc) (optional: man pages) \*
+* [scdoc](https://git.sr.ht/~sircmpwn/scdoc) \*\*\*
 * git \*
 * openmp (if using a compiler other than GCC)
+* Font Awesome 5 Free
 
 _\*Compile-time dep_
 
 _\*\*Optional: required for background images other than PNG_
+
+_\*\*\*Optional: man pages_
 
 Run these commands:
 

@@ -2,13 +2,13 @@ waylogout(1)
 
 # NAME
 
-waylogout-effects - Fancier screen locker for Wayland
+waylogout - Graphical logout/suspend/poweroff/etc utility for Wayland
 
 # SYNOPSIS
 
 _waylogout_ [options...]
 
-Locks your Wayland session.
+Provides you with graphical set of options to logout/suspend/poweroff/etc in your Wayland session.
 
 # OPTIONS
 
@@ -17,42 +17,15 @@ Locks your Wayland session.
 	_$HOME/.waylogout/config_, _$XDG\_CONFIG\_HOME/waylogout/config_, and
 	_SYSCONFDIR/waylogout/config_. All flags aside from this one are valid
 	options in the configuration file using the format _long-option=value_.
-	For options such as _ignore-empty-password_, just supply the _long-option_.
+	For options such as _logout-command_, just supply the _long-option_.
 	All leading dashes should be omitted and the equals sign is required for
 	flags that take an argument.
 
 *-d, --debug*
 	Enable debugging output.
 
-*-e, --ignore-empty-password*
-	When an empty password is provided, do not validate it.
-
-*-F, --show-failed-attempts*
-	Show current count of failed authentication attempts.
-
-*-f, --daemonize*
-	Detach from the controlling terminal after locking.
-
-	Note: this is the default behavior of i3lock.
-
 *--fade-in* <seconds>
-	Fade in the lock screen.
-
-*--submit-on-touch*
-	Submit password in response to a touch event.
-
-*--grace* <seconds>
-	Only require a password after some grace period.
-
-	Note: Together with *--indicator*, the indicator is always shown.
-	Together with *--indicator-idle-visible*, the indicator is only shown
-	after the grace period.
-
-*--grace-no-mouse*
-	With *--grace*, don't unlock in response to a mouse event.
-
-*--grace-no-touch*
-	With *--grace*, don't unlock in response to a touch event.
+	Fade in the logout screen.
 
 *-h, --help*
 	Show help message and quit.
@@ -60,49 +33,51 @@ Locks your Wayland session.
 *-v, --version*
 	Show the version number and quit.
 
+*--scroll-sensitivity* <amount>
+	How fast selected action will change when scrolling with mouse/touch. Lower is faster; default is 8.
+
+*--poweroff-command* <command>
+	Command to run when the poweroff action is activated.
+
+*--reboot-command* <command>
+	Command to run when the reboot action is activated.
+
+*--suspend-command* <command>
+	Command to run when the suspend action is activated
+
+*--hibernate-command* <command>
+Command to run when the hibernate action is activated.
+
+*--logout-command* <command>
+	Command to run when the logout action is activated.
+
+*--lock-command* <command>
+	Command to run when the lock action is activated.
+
+*--switch-user-command* <command>
+	Command to run when the switch-user action is activated.
+
 # APPEARANCE
 
-*-u, --no-unlock-indicator*
-	Disable the unlock indicator.
+Action indicators will only appear for actions where a command has been specified, and will be displayed in the order their commands are specified.
 
-*--indicator*
-	Always show the indicator.
-
-*--clock*
-	Show a clock in the indicator.
-
-*--timestr* <format>
-	The time format for the indicator clock. Defaults to '%T'.
-
-*--datestr* <format>
-	The date format for the indicator clock. Defaults to '%a, %x'.
-
-*--lock-symbol*
-	Show a lock symbol in the indicator. (Requires Font Awesome 5 Free.)
-
-*--user*
-	Show username in the indicator.
+*--hide-cancel*
+	Hide the cancel action.
 
 *-i, --image* [[<output>]:]<path>
 	Display the given image, optionally only on the given output. Use -c to set
 	a background color. If the path potentially contains a ':', prefix it with another
 	':' to prevent interpreting part of it as <output>.
 
+*-l, --labels*
+	Always show action labels.
+
+*--selection-label*
+	Show action label for selected action,
+	even when --labels is not specified.
+
 *-S, --screenshots*
 	Display a screenshot.
-
-*-k, --show-keyboard-layout*
-	Display the current xkb layout while typing.
-
-*-K, --hide-keyboard-layout*
-	Force hiding the current xkb layout while typing, even if more than one layout
-	is configured or the show-keyboard-layout option is set.
-
-*-L, --disable-caps-lock-text*
-	Disable the Caps Lock text.
-
-*-l, --indicator-caps-lock*
-	Show the current Caps Lock state also on the indicator.
 
 *-s, --scaling*
 	Image scaling mode: _stretch_, _fill_, _fit_, _center_, _tile_,
@@ -117,78 +92,41 @@ Locks your Wayland session.
 	sets the background of the image to the given color. Defaults to white
 	(FFFFFF).
 
-*--bs-hl-color* <rrggbb[aa]>
-	Sets the color of backspace highlight segments.
-
-*--caps-lock-bs-hl-color* <rrggbb[aa]>
-	Sets the color of backspace highlight segments when Caps Lock is active.
-
-*--caps-lock-key-hl-color* <rrggbb[aa]>
-	Sets the color of the key press highlight segments when Caps Lock is active.
-
 *--font* <font>
-	Sets the font of the text.
+	Sets the font of the action label text.
 
-*--font-size* <size>
-	Sets a fixed font size for the indicator text.
+*--label-font-size* <size>
+	Sets a fixed font size for the action label text.
 
-*--indicator-idle-visible*
-	Sets the indicator to show even if idle.
+*--symbol-font-size* <size>
+	Sets a fixed font size for the action symbols.
 
 *--indicator-radius* <radius>
-	Sets the indicator radius. The default value is 50.
+	Sets the action indicator radius. The default value is 50.
 
 *--indicator-thickness* <thickness>
-	Sets the indicator thickness. The default value is 10.
+	Sets the action indicator thickness. The default value is 10.
 
 *--indicator-x-position* <x>
-	Sets the horizontal position of the indicator.
+	Sets the horizontal centre position of the action indicator array.
 
 *--indicator-y-position* <y>
-	Sets the vertical position of the indicator.
+	Sets the vertical centre position of the action indicator array.
+
+*--indicator-separation* <sep>
+	Sets a fixed amount of space separating action indicators.
 
 *--inside-color* <rrggbb[aa]>
 	Sets the color of the inside of the indicator.
 
-*--inside-clear-color* <rrggbb[aa]>
-	Sets the color of the inside of the indicator when cleared.
-
-*--inside-caps-lock-color* <rrggbb[aa]>
-	Sets the color of the inside of the indicator when Caps Lock is active.
-
-*--inside-ver-color* <rrggbb[aa]>
-	Sets the color of the inside of the indicator when verifying.
-
-*--inside-wrong-color* <rrggbb[aa]>
-	Sets the color of the inside of the indicator when invalid.
-
-*--key-hl-color* <rrggbb[aa]>
-	Sets the color of the key press highlight segments.
-
-*--layout-bg-color* <rrggbb[aa]>
-	Sets the background color of the box containing the layout text.
-
-*--layout-border-color* <rrggbb[aa]>
-	Sets the color of the border of the box containing the layout text.
-
-*--layout-text-color* <rrggbb[aa]>
-	Sets the color of the layout text.
+*--inside-selection-color* <rrggbb[aa]>
+	Sets the color of the inside of the selected action indicator.
 
 *--line-color* <rrggbb[aa]>
 	Sets the color of the line between the inside and ring.
 
-*--line-clear-color* <rrggbb[aa]>
-	Sets the color of the line between the inside and ring when cleared.
-
-*--line-caps-lock-color* <rrggbb[aa]>
-	Sets the color of the line between the inside and ring when Caps Lock is
-	active.
-
-*--line-ver-color* <rrggbb[aa]>
-	Sets the color of the line between the inside and ring when verifying.
-
-*--line-wrong-color* <rrggbb[aa]>
-	Sets the color of the line between the inside and ring when invalid.
+*--line-selection-color* <rrggbb[aa]>
+	Sets the color of the line between the inside and ring in the selected action indicator.
 
 *-n, --line-uses-inside*
 	Use the inside color for the line between the inside and ring.
@@ -197,37 +135,16 @@ Locks your Wayland session.
 	Use the ring color for the line between the inside and ring.
 
 *--ring-color* <rrggbb[aa]>
-	Sets the color of the ring of the indicator when typing or idle.
+	Sets the color of the ring of the action indicators.
 
-*--ring-clear-color* <rrggbb[aa]>
-	Sets the color of the ring of the indicator when cleared.
-
-*--ring-caps-lock-color* <rrggbb[aa]>
-	Sets the color of the ring of the indicator when Caps Lock is active.
-
-*--ring-ver-color* <rrggbb[aa]>
-	Sets the color of the ring of the indicator when verifying.
-
-*--ring-wrong-color* <rrggbb[aa]>
-	Sets the color of the ring of the indicator when invalid.
-
-*--separator-color* <rrggbb[aa]>
-	Sets the color of the lines that separate highlight segments.
+*--ring-selection-color* <rrggbb[aa]>
+	Sets the color of the ring of the selected action indicator.
 
 *--text-color* <rrggbb[aa]>
 	Sets the color of the text.
 
-*--text-clear-color* <rrggbb[aa]>
-	Sets the color of the text when cleared.
-
-*--text-caps-lock-color* <rrggbb[aa]>
-	Sets the color of the text when Caps Lock is active.
-
-*--text-ver-color* <rrggbb[aa]>
-	Sets the color of the text when verifying.
-
-*--text-wrong-color* <rrggbb[aa]>
-	Sets the color of the text when invalid.
+*--text-selection-color* <rrggbb[aa]>
+	Sets the color of the text for the selected action indicator.
 
 *--effect-blur* <radius>x<times>
 	Blur displayed images.
@@ -242,15 +159,15 @@ Locks your Wayland session.
 *--effect-greyscale*
 	Make the displayed image greyscale.
 
-*--effect-vignette <base>:<factor>*
+*--effect-vignette* <base>:<factor>
 	Apply a vignette effect to images.
 	Base and factor should be numbers between 0 and 1.
 
-*--effect-compose <position>;<size>;<gravity>;<path>*
+*--effect-compose* <position>;<size>;<gravity>;<path>
 	Overlay another image to your lock screen.
 	The _position_, _size_ and _gravity_ part is optional.
 
-*--effect-custom <path>*
+*--effect-custom* <path>
 	Load a custom effect from a shared object. The .so must export a++
 *void waylogout_effect(uint32\_t \*data, int width, int height, int scale)*++
 or an *uint32\_t waylogout_pixel(uint32\_t pix, int x, int y, int width, int height)*.
@@ -258,9 +175,42 @@ or an *uint32\_t waylogout_pixel(uint32\_t pix, int x, int y, int width, int hei
 *--time-effects*
 	Measure the time it takes to run each effect.
 
+# NAVIGATION
+
+You may select a particular action by navigating with the arrow keys, the number keys, tab/shift-tab, or the mouse scroll wheel, or by hovering the mouse pointer.
+
+To activate the configured command for the selected action, press enter, or click the mouse (while hovering), or middle-click the mouse (anywhere).
+
+# SHORTCUT KEYS
+
+*Esc*
+	Exit without running any action command.
+
+*h*
+	Select the hibernate action (if configured).
+
+*k*
+	Select the lock action (if configured).
+
+*p*
+	Select the poweroff action (if configured).
+
+*r*
+	Select the reboot action (if configured).
+
+*s*
+	Select the suspend action (if configured).
+
+*w*
+	Select the switch-user action (if configured).
+
+*x*
+	Select the logout action (if configured).
+
+
 # AUTHORS
 
-Maintained by Martin Dørum, forked from upstream Swaylock which is maintained
-by Drew DeVault.
-For more information about waylogout-effects development, see
-https://github.com/mortie/waylogout-effects.
+Written by Jeremy Sylvestre, based on the codebase of swaylock-effects by Martin Dørum, which is in turn forked from upstream Swaylock by Drew DeVault.
+
+For more information about waylogout development, see
+https://github.com/loserMcloser/waylogout.
