@@ -1,6 +1,6 @@
 # waylogout
 
-waylogout is graphical logout/suspend/reboot/shutdown utility for wayland.
+waylogout is graphical logout/suspend/reboot/shutdown dialog for wayland.
 It is inspired by
 [oblogout](https://launchpad.net/oblogout)
 and based on code from
@@ -70,12 +70,5 @@ Run these commands:
 
 ## Effects
 
-Similar to available effects in
+See the description of available effects in
 [swaylock-effects](https://github.com/mortie/swaylock-effects).
-
-### Custom
-
-`--effect-custom <path>`: Load a custom effect from a shared object.
-
-The .so must export a function `void waylogout_effect(uint32_t *data, int width, int height)`
-or a function `uint32_t waylogout_pixel(uint32_t pix, int x, int y, int width, int height)`.
