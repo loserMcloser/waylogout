@@ -9,76 +9,64 @@ _waylogout()
     -C
     -c
     -d
-    -e
-    -f
-    -F
     -h
     -i
-    -k
-    -K
-    -L
     -l
     -n
     -r
     -s
+    -S
     -t
-    -u
     -v
   )
 
   long=(
-    --bs-hl-color
-    --caps-lock-bs-hl-color
-    --caps-lock-key-hl-color
     --color
     --config
-    --daemonize
     --debug
-    --disable-caps-lock-text
+    --effect-blur
+    --effect-custom
+    --effect-greyscale
+    --effect-pixelate
+    --effect-scale
+    --effect-vignette
+    --fade-in
     --font
-    --font-size
     --help
-    --hide-keyboard-layout
-    --ignore-empty-password
+    --hibernate-command
+    --hide-cancel
     --image
-    --indicator-caps-lock
-    --indicator-idle-visible
     --indicator-radius
+    --indicator-separation
     --indicator-thickness
     --indicator-x-position
     --indicator-y-position
-    --inside-caps-lock-color
-    --inside-clear-color
     --inside-color
-    --inside-ver-color
-    --inside-wrong-color
-    --key-hl-color
-    --layout-bg-color
-    --layout-border-color
-    --layout-text-color
-    --line-caps-lock-color
-    --line-clear-color
+    --inside-selection-color
+    --label-font-size
+    --labels
     --line-color
+    --line-selection-color
     --line-uses-inside
     --line-uses-ring
-    --line-ver-color
-    --line-wrong-color
-    --no-unlock-indicator
-    --ring-caps-lock-color
-    --ring-clear-color
+    --lock-command
+    --logout-command
+    --poweroff-command
+    --reboot-command
     --ring-color
-    --ring-ver-color
-    --ring-wrong-color
+    --ring-selection-color
     --scaling
-    --separator-color
-    --show-failed-attempts
-    --show-keyboard-layout
-    --text-caps-lock-color
-    --text-clear-color
+    --screenshots
+    --scroll-sensitivity
+    --selection-label
+    --suspend-command
+    --switch-user-command
+    --symbol-font-size
     --text-color
-    --text-ver-color
-    --text-wrong-color
+    --text-selection-color
     --tiling
+    --time-effects
+    --trace
     --version
   )
 
