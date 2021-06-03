@@ -39,7 +39,7 @@ This is the command used to make the screenshot.
 
 ### From Packages
 
-* TODO AUR
+* Arch Linux (AUR): [waylogout-git](https://aur.archlinux.org/packages/waylogout-git)
 
 ### Compiling from Source
 
