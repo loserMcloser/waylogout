@@ -1,12 +1,12 @@
 # waylogout
 
-waylogout is graphical logout/suspend/reboot/shutdown utility for wayland
-inspired by
+waylogout is graphical logout/suspend/reboot/shutdown utility for wayland.
+It is inspired by
 [oblogout](https://launchpad.net/oblogout)
 and based on code from
 [swaylock-effects](https://github.com/mortie/swaylock-effects).
 
-TODO screenshot
+![Screenshot](/screenshot.png)
 
 ## Example Command
 
