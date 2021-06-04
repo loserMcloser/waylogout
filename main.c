@@ -901,51 +901,13 @@ static void add_action(struct waylogout_state *state,
 	wl_list_insert(state->actions.prev, &new_action->link);
 
 	waylogout_log(LOG_DEBUG,
-	  "Action %s:     \n"
-	  "  pointer %p   \n"
-	  "  symbol  %s   \n"
-	  "  command %s   \n"
-	  "  buffer %d:   \n"
-	  "    buffer  %p \n"
-	  "    surface %p \n"
-	  "    cairo   %p \n"
-	  "    width   %u \n"
-	  "    height  %u \n"
-	  "    data    %p \n"
-	  "    size    %zd\n"
-	  "    %sbusy     \n"
-	  "  buffer %d:   \n"
-	  "    buffer  %p \n"
-	  "    surface %p \n"
-	  "    cairo   %p \n"
-	  "    width   %u \n"
-	  "    height  %u \n"
-	  "    data    %p \n"
-	  "    size    %zd\n"
-	  "    %sbusy       "
+	  "Action %s:  \n"
+	  "  symbol  %s\n"
+	  "  command %s"
 	  ,
 	  new_action->label,
-	  new_action,
 	  new_action->symbol,
-	  new_action->command,
-	  0,
-	  new_action->indicator_buffers[0].buffer,
-	  new_action->indicator_buffers[0].surface,
-	  new_action->indicator_buffers[0].cairo,
-	  new_action->indicator_buffers[0].width,
-	  new_action->indicator_buffers[0].height,
-	  new_action->indicator_buffers[0].data,
-	  new_action->indicator_buffers[0].size,
-	  new_action->indicator_buffers[0].busy ? "" : "not ",
-	  1,
-	  new_action->indicator_buffers[1].buffer,
-	  new_action->indicator_buffers[1].surface,
-	  new_action->indicator_buffers[1].cairo,
-	  new_action->indicator_buffers[1].width,
-	  new_action->indicator_buffers[1].height,
-	  new_action->indicator_buffers[1].data,
-	  new_action->indicator_buffers[1].size,
-	  new_action->indicator_buffers[1].busy ? "" : "not "
+	  new_action->command
 	);
 
 }
