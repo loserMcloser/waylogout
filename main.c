@@ -912,7 +912,7 @@ static void add_action(struct waylogout_state *state,
 	  "    width   %u \n"
 	  "    height  %u \n"
 	  "    data    %p \n"
-	  "    size    %ld\n"
+	  "    size    %zd\n"
 	  "    %sbusy     \n"
 	  "  buffer %d:   \n"
 	  "    buffer  %p \n"
@@ -921,7 +921,7 @@ static void add_action(struct waylogout_state *state,
 	  "    width   %u \n"
 	  "    height  %u \n"
 	  "    data    %p \n"
-	  "    size    %ld\n"
+	  "    size    %zd\n"
 	  "    %sbusy       "
 	  ,
 	  new_action->label,
