@@ -7,6 +7,7 @@
 #include <stdbool.h>
 #include <string.h>
 #include <sys/mman.h>
+#include <sys/stat.h>
 #include <wayland-client.h>
 #include <wayland-cursor.h>
 #include <wordexp.h>
