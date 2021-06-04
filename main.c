@@ -7,6 +7,7 @@
 #include <stdbool.h>
 #include <string.h>
 #include <sys/mman.h>
+#include <sys/stat.h>
 #include <wayland-client.h>
 #include <wayland-cursor.h>
 #include <wordexp.h>
@@ -911,7 +912,7 @@ static void add_action(struct waylogout_state *state,
 	  "    width   %u \n"
 	  "    height  %u \n"
 	  "    data    %p \n"
-	  "    size    %ld\n"
+	  "    size    %zd\n"
 	  "    %sbusy     \n"
 	  "  buffer %d:   \n"
 	  "    buffer  %p \n"
@@ -920,7 +921,7 @@ static void add_action(struct waylogout_state *state,
 	  "    width   %u \n"
 	  "    height  %u \n"
 	  "    data    %p \n"
-	  "    size    %ld\n"
+	  "    size    %zd\n"
 	  "    %sbusy       "
 	  ,
 	  new_action->label,
