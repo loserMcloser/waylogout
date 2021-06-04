@@ -1128,7 +1128,6 @@ static int parse_options(int argc, char **argv, struct waylogout_state *state,
 			}
 			break;
 		case 'd':
-			state->args.debug = true;
 			waylogout_log_init(LOG_DEBUG);
 			break;
 		case LO_TRACE:
@@ -1550,7 +1549,6 @@ int main(int argc, char **argv) {
 		.selection_label = false,
 		.hide_cancel = false,
 		.screenshots = false,
-		.debug = false,
 		.effects = NULL,
 		.effects_count = 0,
 	};
