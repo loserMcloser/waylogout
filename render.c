@@ -42,7 +42,7 @@ void render_frame_background(struct waylogout_surface *surface) {
 
 	wl_surface_set_buffer_scale(surface->surface, surface->scale);
 	wl_surface_attach(surface->surface, surface->current_buffer->buffer, 0, 0);
-	wl_surface_damage(surface->surface, 0, 0, surface->width, surface->height);
+	wl_surface_damage_buffer(surface->surface, 0, 0, INT32_MAX, INT32_MAX);
 	wl_surface_commit(surface->surface);
 }
 
@@ -231,16 +231,21 @@ void render_frame(struct waylogout_action *action,
 			fr_common.outer_radius, 0, 2 * M_PI);
 	cairo_stroke(cairo);
 
+	// Ensure buffer size is multiple of buffer scale - required by protocol
+	new_height += surface->scale - (new_height % surface->scale);
+	new_width += surface->scale - (new_width % surface->scale);
+
 	if (buffer_width != new_width || buffer_height != new_height) {
 		destroy_buffer(surface->current_buffer);
 		action->indicator_width = new_width;
 		action->indicator_height = new_height;
 		render_frame(action, surface, fr_common);
+		return;
 	}
 
 	wl_surface_set_buffer_scale(action->child_surface, surface->scale);
 	wl_surface_attach(action->child_surface, surface->current_buffer->buffer, 0, 0);
-	wl_surface_damage(action->child_surface, 0, 0, surface->current_buffer->width, surface->current_buffer->height);
+	wl_surface_damage_buffer(action->child_surface, 0, 0, INT32_MAX, INT32_MAX);
 	wl_surface_commit(action->child_surface);
 
 	wl_surface_commit(surface->surface);

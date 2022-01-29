@@ -322,14 +322,16 @@ static void layer_surface_configure(void *data,
 	surface->height = height;
 	struct waylogout_action *action_iter;
 	wl_list_for_each(action_iter, &surface->state->actions, link) {
-		action_iter->indicator_width = 1;
-		action_iter->indicator_height = 1;
+		action_iter->indicator_width = 0;
+		action_iter->indicator_height = 0;
 	}
 	zwlr_layer_surface_v1_ack_configure(layer_surface, serial);
 
-	if (--surface->events_pending == 0) {
+	if (!surface->configured && --surface->events_pending == 0) {
 		initially_render_surface(surface);
 	}
+	surface->configured = true;
+
 }
 
 static void layer_surface_closed(void *data,
@@ -679,7 +681,7 @@ static void handle_global(void *data, struct wl_registry *registry,
 	struct waylogout_state *state = data;
 	if (strcmp(interface, wl_compositor_interface.name) == 0) {
 		state->compositor = wl_registry_bind(registry, name,
-				&wl_compositor_interface, 3);
+				&wl_compositor_interface, 4);
 	} else if (strcmp(interface, wl_subcompositor_interface.name) == 0) {
 		state->subcompositor = wl_registry_bind(registry, name,
 				&wl_subcompositor_interface, 1);
@@ -1497,7 +1499,7 @@ static int load_config(char *path, struct waylogout_state *state,
 		char *flag = malloc(nread + 3);
 		if (flag == NULL) {
 			free(line);
-			free(config);
+			fclose(config);
 			waylogout_log(LOG_ERROR, "Failed to allocate memory");
 			return 0;
 		}

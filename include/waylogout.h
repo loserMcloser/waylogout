@@ -132,6 +132,7 @@ struct waylogout_surface {
 	struct pool_buffer *current_buffer;
 	struct waylogout_fade fade;
 	int events_pending;
+	bool configured;
 	bool frame_pending, dirty;
 	uint32_t width, height;
 	int32_t scale;

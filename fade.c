@@ -1,6 +1,7 @@
 #include "fade.h"
 #include "pool-buffer.h"
 #include "waylogout.h"
+#include <stdlib.h>
 #include <stdio.h>
 #include <omp.h>
 #include <stdalign.h>
