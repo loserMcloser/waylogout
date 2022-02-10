@@ -54,7 +54,7 @@ Install dependencies:
 * [scdoc](https://git.sr.ht/~sircmpwn/scdoc) \*\*\*
 * git \*
 * openmp (if using a compiler other than GCC)
-* Font Awesome 5 Free
+* Font Awesome 6 Free
 
 _\*Compile-time dep_
 
