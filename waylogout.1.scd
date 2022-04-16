@@ -208,6 +208,12 @@ To activate the configured command for the selected action, press enter, or clic
 	Select the logout action (if configured).
 
 
+# SHORTCUT KEY OPTIONS
+
+*--reverse-arrows*
+	Reverse the direction of the up/down arrows.
+
+
 # AUTHORS
 
 Written by Jeremy Sylvestre, based on the codebase of swaylock-effects by Martin Dørum, which is in turn forked from upstream Swaylock by Drew DeVault.

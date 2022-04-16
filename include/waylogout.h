@@ -42,7 +42,7 @@ struct waylogout_args {
 	bool labels;
 	bool selection_label;
 	bool hide_cancel;
-
+	bool reverse_arrows;
 	bool screenshots;
 	struct waylogout_effect *effects;
 	int effects_count;

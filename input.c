@@ -165,13 +165,23 @@ void waylogout_handle_key(struct waylogout_state *state,
 	case XKB_KEY_Escape:
 		state->run_display = false;
 		break;
+	case XKB_KEY_Down:
+		if (state->args.reverse_arrows)
+			select_next_action(state);
+		else
+			select_prev_action(state);
+		break;
 	case XKB_KEY_Left: /* fallthrough */
-	case XKB_KEY_Down: /* fallthrough */
 	case XKB_KEY_ISO_Left_Tab:
 		select_prev_action(state);
 		break;
+	case XKB_KEY_Up:
+		if (state->args.reverse_arrows)
+			select_prev_action(state);
+		else
+			select_next_action(state);
+		break;
 	case XKB_KEY_Right: /* fallthrough */
-	case XKB_KEY_Up:    /* fallthrough */
 	case XKB_KEY_Tab:
 		select_next_action(state);
 		break;

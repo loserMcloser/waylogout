@@ -946,6 +946,7 @@ static int parse_options(int argc, char **argv, struct waylogout_state *state,
 		LO_LABELS,
 		LO_SELECTION_LABEL,
 		LO_HIDE_CANCEL,
+		LO_REVERSE_ARROWS,
 		LO_COMMAND_POWEROFF,
 		LO_COMMAND_REBOOT,
 		LO_COMMAND_SUSPEND,
@@ -1004,6 +1005,7 @@ static int parse_options(int argc, char **argv, struct waylogout_state *state,
 		{"lock-command", required_argument, NULL, LO_COMMAND_LOCK},
 		{"switch-user-command", required_argument, NULL, LO_COMMAND_SWITCH},
 		{"hide-cancel", no_argument, NULL, LO_HIDE_CANCEL},
+		{"reverse-arrows", no_argument, NULL, LO_REVERSE_ARROWS},
 		{"scroll-sensitivity", required_argument, NULL, LO_COMMAND_SCROLL_SENSITIVITY},
 		{0, 0, 0, 0}
 	};
@@ -1104,6 +1106,8 @@ static int parse_options(int argc, char **argv, struct waylogout_state *state,
 		    "Command to run when \"switch user\" action is activated.\n"
 		"  --hide-cancel                    "
 			"Hide the indicator for the \"cancel\" option.\n"
+		"  --reverse-arrows                 "
+			"Reverse the direction of up/down arrows.\n"
 		"  --scroll-sensitivity <amount>    "
 		    "How fast selected action will change when scrolling with mouse/touch. "
 			"Lower is faster; default is 8.\n"
@@ -1427,6 +1431,10 @@ static int parse_options(int argc, char **argv, struct waylogout_state *state,
 			if (state)
 				state->args.hide_cancel = true;
 			break;
+		case LO_REVERSE_ARROWS:
+			if (state)
+				state->args.reverse_arrows = true;
+			break;
 		case LO_COMMAND_SCROLL_SENSITIVITY:
 			if (state)
 				state->args.scroll_sensitivity = atoi(optarg);
@@ -1550,6 +1558,7 @@ int main(int argc, char **argv) {
 		.labels = false,
 		.selection_label = false,
 		.hide_cancel = false,
+		.reverse_arrows = false,
 		.screenshots = false,
 		.effects = NULL,
 		.effects_count = 0,
