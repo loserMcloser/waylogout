@@ -16,6 +16,7 @@ This is the command used to make the screenshot.
 		--hide-cancel \
 		--screenshots \
 		--font="Baloo 2" \
+		--fa-font="Font Awesome 6 Free" \
 		--effect-blur=7x5 \
 		--indicator-thickness=20 \
 		--ring-color=888888aa \
@@ -54,7 +55,7 @@ Install dependencies:
 * [scdoc](https://git.sr.ht/~sircmpwn/scdoc) \*\*\*
 * git \*
 * openmp (if using a compiler other than GCC)
-* Font Awesome 6 Free
+* Font Awesome
 
 _\*Compile-time dep_
 

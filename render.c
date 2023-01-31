@@ -197,7 +197,7 @@ void render_frame(struct waylogout_action *action,
 		fr_common.selected_symbol_font_size : fr_common.symbol_font_size);
 	cairo_select_font_face(
 		cairo,
-		"Font Awesome 6 Free",
+		state->args.fa_font,
 		CAIRO_FONT_SLANT_NORMAL,
 		//   CAIRO_FONT_WEIGHT_NORMAL
 		CAIRO_FONT_WEIGHT_BOLD

@@ -95,6 +95,9 @@ Action indicators will only appear for actions where a command has been specifie
 *--font* <font>
 	Sets the font of the action label text.
 
+*--fa-font* <font>
+	Sets the name of the Font Awesome font. Default is "Font Awesome 6 Free".
+
 *--label-font-size* <size>
 	Sets a fixed font size for the action label text.
 

@@ -919,6 +919,7 @@ static int parse_options(int argc, char **argv, struct waylogout_state *state,
 	enum long_option_codes {
 		LO_TRACE,
 		LO_FONT,
+		LO_FA_FONT,
 		LO_SYMBOL_FONT_SIZE,
 		LO_LABEL_FONT_SIZE,
 		LO_IND_RADIUS,
@@ -973,6 +974,7 @@ static int parse_options(int argc, char **argv, struct waylogout_state *state,
 		{"version", no_argument, NULL, 'v'},
 		{"selection-label", no_argument, NULL, LO_SELECTION_LABEL},
 		{"font", required_argument, NULL, LO_FONT},
+		{"fa-font", required_argument, NULL, LO_FA_FONT},
 		{"symbol-font-size", required_argument, NULL, LO_SYMBOL_FONT_SIZE},
 		{"label-font-size", required_argument, NULL, LO_LABEL_FONT_SIZE},
 		{"indicator-radius", required_argument, NULL, LO_IND_RADIUS},
@@ -1190,6 +1192,12 @@ static int parse_options(int argc, char **argv, struct waylogout_state *state,
 			if (state) {
 				free(state->args.font);
 				state->args.font = strdup(optarg);
+			}
+			break;
+		case LO_FA_FONT:
+			if (state) {
+				free(state->args.fa_font);
+				state->args.fa_font = strdup(optarg);
 			}
 			break;
 		case LO_SYMBOL_FONT_SIZE:
@@ -1545,6 +1553,7 @@ int main(int argc, char **argv) {
 	state.args = (struct waylogout_args){
 		.mode = BACKGROUND_MODE_FILL,
 		.font = strdup("sans-serif"),
+		.fa_font = strdup("Font Awesome 6 Free"),
 		.symbol_font_size = 0,
 		.label_font_size = 0,
 		.radius = 75,

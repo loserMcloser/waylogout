@@ -29,6 +29,7 @@ struct waylogout_args {
 	struct waylogout_colors colors;
 	enum background_mode mode;
 	char *font;
+	char *fa_font;
 	uint32_t symbol_font_size;
 	uint32_t label_font_size;
 	uint32_t radius;
