@@ -211,8 +211,6 @@ void render_frame(struct waylogout_action *action,
 	y += (fe.height / 2 - fe.descent);
 	if (show_label)
 		y += fe.height / 5;
-	else
-		y -= fe.height/10;
 	cairo_move_to(cairo, x, y);
 	cairo_show_text(cairo, symbol);
 	cairo_close_path(cairo);
