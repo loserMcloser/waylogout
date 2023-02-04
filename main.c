@@ -953,6 +953,7 @@ static int parse_options(int argc, char **argv, struct waylogout_state *state,
 		LO_COMMAND_SUSPEND,
 		LO_COMMAND_HIBERNATE,
 		LO_COMMAND_LOGOUT,
+		LO_COMMAND_RELOAD,
 		LO_COMMAND_LOCK,
 		LO_COMMAND_SWITCH,
 		LO_COMMAND_SCROLL_SENSITIVITY,
@@ -1004,6 +1005,7 @@ static int parse_options(int argc, char **argv, struct waylogout_state *state,
 		{"suspend-command", required_argument, NULL, LO_COMMAND_SUSPEND},
 		{"hibernate-command", required_argument, NULL, LO_COMMAND_HIBERNATE},
 		{"logout-command", required_argument, NULL, LO_COMMAND_LOGOUT},
+		{"reload-command", required_argument, NULL, LO_COMMAND_RELOAD},
 		{"lock-command", required_argument, NULL, LO_COMMAND_LOCK},
 		{"switch-user-command", required_argument, NULL, LO_COMMAND_SWITCH},
 		{"hide-cancel", no_argument, NULL, LO_HIDE_CANCEL},
@@ -1411,6 +1413,17 @@ static int parse_options(int argc, char **argv, struct waylogout_state *state,
 				  "",
 				  optarg,
 				  XKB_KEY_x
+				);
+			break;
+		case LO_COMMAND_RELOAD:
+			if (state)
+				add_action(
+				  state,
+				  WL_ACTION_RELOAD,
+				  "reload",
+				  "",
+				  optarg,
+				  XKB_KEY_c
 				);
 			break;
 		case LO_COMMAND_LOCK:

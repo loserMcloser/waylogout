@@ -51,6 +51,9 @@ Command to run when the hibernate action is activated.
 *--logout-command* <command>
 	Command to run when the logout action is activated.
 
+*--reload-command* <command>
+	Command to run when the reload session config action is activated.
+
 *--lock-command* <command>
 	Command to run when the lock action is activated.
 
@@ -188,6 +191,9 @@ To activate the configured command for the selected action, press enter, or clic
 
 *Esc*
 	Exit without running any action command.
+
+*c*
+	Select the reload session config action (if configured).
 
 *h*
 	Select the hibernate action (if configured).
