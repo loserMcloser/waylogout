@@ -11,6 +11,18 @@ void run_action(struct waylogout_action *action) {
 	execvp(cmd[0], cmd);
 }
 
+void select_first_action(struct waylogout_state *state) {
+	state->selected_action =
+			wl_container_of(state->actions.next, state->selected_action, link);
+	damage_state(state);
+}
+
+void select_last_action(struct waylogout_state *state) {
+	state->selected_action =
+			wl_container_of(state->actions.prev, state->selected_action, link);
+	damage_state(state);
+}
+
 void select_next_action(struct waylogout_state *state) {
 	struct wl_list *selection;
 	if (state->selected_action) {
@@ -165,25 +177,37 @@ void waylogout_handle_key(struct waylogout_state *state,
 	case XKB_KEY_Escape:
 		state->run_display = false;
 		break;
-	case XKB_KEY_Down:
+	case XKB_KEY_Down: /* fallthrough */
+	case XKB_KEY_KP_Down:
 		if (state->args.reverse_arrows)
 			select_next_action(state);
 		else
 			select_prev_action(state);
 		break;
 	case XKB_KEY_Left: /* fallthrough */
+	case XKB_KEY_KP_Left: /* fallthrough */
 	case XKB_KEY_ISO_Left_Tab:
 		select_prev_action(state);
 		break;
-	case XKB_KEY_Up:
+	case XKB_KEY_Up: /* fallthrough */
+	case XKB_KEY_KP_Up:
 		if (state->args.reverse_arrows)
 			select_prev_action(state);
 		else
 			select_next_action(state);
 		break;
 	case XKB_KEY_Right: /* fallthrough */
+	case XKB_KEY_KP_Right: /* fallthrough */
 	case XKB_KEY_Tab:
 		select_next_action(state);
+		break;
+	case XKB_KEY_Home: /* fallthrough */
+	case XKB_KEY_KP_Home:
+		select_first_action(state);
+		break;
+	case XKB_KEY_End: /* fallthrough */
+	case XKB_KEY_KP_End:
+		select_last_action(state);
 		break;
 	case XKB_KEY_F1:
 		codepoint = 1;

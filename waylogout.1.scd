@@ -183,7 +183,7 @@ or an *uint32\_t waylogout_pixel(uint32\_t pix, int x, int y, int width, int hei
 
 # NAVIGATION
 
-You may select a particular action by navigating with the arrow keys, the number keys, tab/shift-tab, or the mouse scroll wheel, or by hovering the mouse pointer.
+You may select a particular action by navigating with the arrow keys, home/end, tab/shift-tab, the number keys, or the mouse scroll wheel, or by hovering the mouse pointer.
 
 To activate the configured command for the selected action, press enter, or click the mouse (while hovering), or middle-click the mouse (anywhere).
 
