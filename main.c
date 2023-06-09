@@ -914,6 +914,46 @@ static void add_action(struct waylogout_state *state,
 
 }
 
+static void set_default_action(struct waylogout_state *state) {
+	enum waylogout_action_type default_type;
+	if (lenient_strcmp(state->args.default_action, "poweroff") == 0)
+		default_type = WL_ACTION_POWEROFF;
+	else if (lenient_strcmp(state->args.default_action, "reboot") == 0)
+		default_type = WL_ACTION_REBOOT;
+	else if (lenient_strcmp(state->args.default_action, "suspend") == 0)
+		default_type = WL_ACTION_SUSPEND;
+	else if (lenient_strcmp(state->args.default_action, "hibernate") == 0)
+		default_type = WL_ACTION_HIBERNATE;
+	else if (lenient_strcmp(state->args.default_action, "logout") == 0)
+		default_type = WL_ACTION_LOGOUT;
+	else if (lenient_strcmp(state->args.default_action, "reload") == 0)
+		default_type = WL_ACTION_RELOAD;
+	else if (lenient_strcmp(state->args.default_action, "lock") == 0)
+		default_type = WL_ACTION_LOCK;
+	else if (lenient_strcmp(state->args.default_action, "switch-user") == 0)
+		default_type = WL_ACTION_SWITCH;
+	else
+		default_type = WL_ACTION_NO_ACTION;
+
+	if (default_type == WL_ACTION_NO_ACTION) {
+		waylogout_log(LOG_DEBUG, "No default action configured");
+		return;
+	}
+
+	bool found_default = false;
+	struct waylogout_action *action_iter;
+	wl_list_for_each(action_iter, &state->actions, link)
+		if (default_type == action_iter->type) {
+			state->selected_action = action_iter;
+			found_default = true;
+		}
+	if (found_default)
+		waylogout_log(LOG_INFO, "Set default action to %s", state->args.default_action);
+	else
+		waylogout_log(LOG_ERROR, "Requested default action is %s, but that action has not been configured", state->args.default_action);
+}
+
+
 static int parse_options(int argc, char **argv, struct waylogout_state *state,
 		enum line_mode *line_mode, char **config_path) {
 	enum long_option_codes {
@@ -922,6 +962,7 @@ static int parse_options(int argc, char **argv, struct waylogout_state *state,
 		LO_FA_FONT,
 		LO_SYMBOL_FONT_SIZE,
 		LO_LABEL_FONT_SIZE,
+		LO_DEFAULT_ACTION,
 		LO_IND_RADIUS,
 		LO_IND_X_POSITION,
 		LO_IND_Y_POSITION,
@@ -1008,6 +1049,7 @@ static int parse_options(int argc, char **argv, struct waylogout_state *state,
 		{"reload-command", required_argument, NULL, LO_COMMAND_RELOAD},
 		{"lock-command", required_argument, NULL, LO_COMMAND_LOCK},
 		{"switch-user-command", required_argument, NULL, LO_COMMAND_SWITCH},
+		{"default-action", required_argument, NULL, LO_DEFAULT_ACTION},
 		{"hide-cancel", no_argument, NULL, LO_HIDE_CANCEL},
 		{"reverse-arrows", no_argument, NULL, LO_REVERSE_ARROWS},
 		{"scroll-sensitivity", required_argument, NULL, LO_COMMAND_SCROLL_SENSITIVITY},
@@ -1108,6 +1150,8 @@ static int parse_options(int argc, char **argv, struct waylogout_state *state,
 		    "Command to run when \"lock\" action is activated.\n"
 		"  --switch-user-command <command>  "
 		    "Command to run when \"switch user\" action is activated.\n"
+		"  --default-action <action-name>  "
+		    "Action to pre-select on start.\n"
 		"  --hide-cancel                    "
 			"Hide the indicator for the \"cancel\" option.\n"
 		"  --reverse-arrows                 "
@@ -1200,6 +1244,12 @@ static int parse_options(int argc, char **argv, struct waylogout_state *state,
 			if (state) {
 				free(state->args.fa_font);
 				state->args.fa_font = strdup(optarg);
+			}
+			break;
+		case LO_DEFAULT_ACTION:
+			if (state) {
+				free(state->args.default_action);
+				state->args.default_action = strdup(optarg);
 			}
 			break;
 		case LO_SYMBOL_FONT_SIZE:
@@ -1567,6 +1617,7 @@ int main(int argc, char **argv) {
 		.mode = BACKGROUND_MODE_FILL,
 		.font = strdup("sans-serif"),
 		.fa_font = strdup("Font Awesome 6 Free"),
+		.default_action = NULL,
 		.symbol_font_size = 0,
 		.label_font_size = 0,
 		.radius = 75,
@@ -1638,6 +1689,8 @@ int main(int argc, char **argv) {
 	}
 
 	waylogout_log(LOG_DEBUG, "Found %d configured actions", n_actions);
+
+	set_default_action(&state);
 
 	state.args.scroll_sensitivity = state.args.scroll_sensitivity * 1000;
 

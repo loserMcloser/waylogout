@@ -60,6 +60,9 @@ Command to run when the hibernate action is activated.
 *--switch-user-command* <command>
 	Command to run when the switch-user action is activated.
 
+*--default-action* <action-name>
+	Action to pre-select on start-up. Must be one of _poweroff_, _reboot_, _suspend_, _hibernate_, _logout_, _reload_, _lock_, or _switch-user_.
+
 # APPEARANCE
 
 Action indicators will only appear for actions where a command has been specified, and will be displayed in the order their commands are specified.

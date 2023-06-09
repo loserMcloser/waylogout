@@ -30,6 +30,7 @@ struct waylogout_args {
 	enum background_mode mode;
 	char *font;
 	char *fa_font;
+	char *default_action;
 	uint32_t symbol_font_size;
 	uint32_t label_font_size;
 	uint32_t radius;
@@ -54,6 +55,7 @@ struct waylogout_args {
 struct waylogout_surface;
 
 enum waylogout_action_type {
+	WL_ACTION_NO_ACTION,
 	WL_ACTION_POWEROFF,
 	WL_ACTION_REBOOT,
 	WL_ACTION_SUSPEND,
