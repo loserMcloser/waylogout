@@ -1505,96 +1505,95 @@ static int parse_options(int argc, char **argv, struct waylogout_state *state,
 			break;
 		case LO_TEXT_POWEROFF:
 			if (state)
-				state->args.text_poweroff = optarg;
+				state->args.text_poweroff = strdup(optarg);
 			break;
 		case LO_TEXT_REBOOT:
 			if (state)
-				state->args.text_reboot = optarg;
+				state->args.text_reboot = strdup(optarg);
 			break;
 		case LO_TEXT_SUSPEND:
 			if (state)
-				state->args.text_suspend = optarg;
+				state->args.text_suspend = strdup(optarg);
 			break;
 		case LO_TEXT_HIBERNATE:
 			if (state)
-				state->args.text_hibernate = optarg;
+				state->args.text_hibernate = strdup(optarg);
 			break;
 		case LO_TEXT_LOGOUT:
 			if (state)
-				state->args.text_logout = optarg;
+				state->args.text_logout = strdup(optarg);
 			break;
 		case LO_TEXT_RELOAD:
 			if (state)
-				state->args.text_reload = optarg;
+				state->args.text_reload = strdup(optarg);
 			break;
 		case LO_TEXT_LOCK:
 			if (state)
-				state->args.text_lock = optarg;
+				state->args.text_lock = strdup(optarg);
 			break;
 		case LO_TEXT_SWITCH:
 			if (state)
-				state->args.text_switch = optarg;
+				state->args.text_switch = strdup(optarg);
 			break;
-
 		case LO_ICON_REBOOT:
 			if (state)
-				state->args.icon_reboot = optarg;
+				state->args.icon_reboot = strdup(optarg);
 			break;
 		case LO_ICON_SUSPEND:
 			if (state)
-				state->args.icon_suspend = optarg;
+				state->args.icon_suspend = strdup(optarg);
 			break;
 		case LO_ICON_HIBERNATE:
 			if (state)
-				state->args.icon_hibernate = optarg;
+				state->args.icon_hibernate = strdup(optarg);
 			break;
 		case LO_ICON_LOGOUT:
 			if (state)
-				state->args.icon_logout = optarg;
+				state->args.icon_logout = strdup(optarg);
 			break;
 		case LO_ICON_RELOAD:
 			if (state)
-				state->args.icon_reload = optarg;
+				state->args.icon_reload = strdup(optarg);
 			break;
 		case LO_ICON_LOCK:
 			if (state)
-				state->args.icon_lock = optarg;
+				state->args.icon_lock = strdup(optarg);
 			break;
 		case LO_ICON_SWITCH:
 			if (state)
-				state->args.icon_switch = optarg;
+				state->args.icon_switch = strdup(optarg);
 			break;
 		case LO_COMMAND_POWEROFF:
 			if (state)
-				state->args.command_poweroff = optarg;
+				state->args.command_poweroff = strdup(optarg);
 			break;
 		case LO_COMMAND_REBOOT:
 			if (state)
-				state->args.command_reboot = optarg;
+				state->args.command_reboot = strdup(optarg);
 			break;
 		case LO_COMMAND_SUSPEND:
 			if (state)
-				state->args.command_suspend = optarg;
+				state->args.command_suspend = strdup(optarg);
 			break;
 		case LO_COMMAND_HIBERNATE:
 			if (state)
-				state->args.command_hibernate = optarg;
+				state->args.command_hibernate = strdup(optarg);
 			break;
 		case LO_COMMAND_LOGOUT:
 			if (state)
-				state->args.command_logout = optarg;
+				state->args.command_logout = strdup(optarg);
 			break;
 		case LO_COMMAND_RELOAD:
 			if (state)
-				state->args.command_reload = optarg;
+				state->args.command_reload = strdup(optarg);
 			break;
 		case LO_COMMAND_LOCK:
 			if (state)
-				state->args.command_lock = optarg;
+				state->args.command_lock = strdup(optarg);
 			break;
 		case LO_COMMAND_SWITCH:
 			if (state)
-				state->args.command_switch = optarg;
+				state->args.command_switch = strdup(optarg);
 			break;
 		case LO_SHORTCUT_POWEROFF:
 			if (state)
