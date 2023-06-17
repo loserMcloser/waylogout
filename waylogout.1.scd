@@ -63,6 +63,48 @@ Command to run when the hibernate action is activated.
 *--default-action* <action-name>
 	Action to pre-select on start-up. Must be one of _poweroff_, _reboot_, _suspend_, _hibernate_, _logout_, _reload_, _lock_, or _switch-user_.
 
+*--poweroff-text* <command>
+	Text for poweroff action.
+
+*--reboot-text* <command>
+	Text for reboot action.
+
+*--suspend-text* <command>
+	Text for suspend action.
+
+*--hibernate-text* <command>
+	Text for hibernate action.
+
+*--logout-text* <command>
+	Text for logout action.
+
+*--lock-text* <command>
+	Text for lock action.
+
+*--switch-user-text* <command>
+	Text for switch user action.
+
+*--poweroff-icon* <command>
+	Icon for poweroff action.
+
+*--reboot-icon* <command>
+	Icon for reboot action.
+
+*--suspend-icon* <command>
+	Icon for suspend action.
+
+*--hibernate-icon* <command>
+	Icon for hibernate action.
+
+*--logout-icon* <command>
+	Icon for logout action.
+
+*--lock-icon* <command>
+	Icon for lock action.
+
+*--switch-user-icon* <command>
+	Icon for switch user action.
+
 # APPEARANCE
 
 Action indicators will only appear for actions where a command has been specified, and will be displayed in the order their commands are specified.
@@ -190,7 +232,7 @@ You may select a particular action by navigating with the arrow keys, home/end, 
 
 To activate the configured command for the selected action, press enter, or click the mouse (while hovering), or middle-click the mouse (anywhere).
 
-# SHORTCUT KEYS
+# DEFAULT SHORTCUT KEYS
 
 *Esc*
 	Exit without running any action command.
@@ -221,6 +263,27 @@ To activate the configured command for the selected action, press enter, or clic
 
 
 # SHORTCUT KEY OPTIONS
+
+*--poweroff-shortcut* <command>
+	Shortcut for poweroff action.
+
+*--reboot-shortcut* <command>
+	Shortcut for reboot action.
+
+*--suspend-shortcut* <command>
+	Shortcut for suspend action.
+
+*--hibernate-shortcut* <command>
+	Shortcut for hibernate action.
+
+*--logout-shortcut* <command>
+	Shortcut for logout action.
+
+*--lock-shortcut* <command>
+	Shortcut for lock action.
+
+*--switch-user-shortcut* <command>
+	Shortcut for switch user action.
 
 *--reverse-arrows*
 	Reverse the direction of the up/down arrows.
