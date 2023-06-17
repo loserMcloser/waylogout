@@ -63,25 +63,25 @@ Command to run when the hibernate action is activated.
 *--default-action* <action-name>
 	Action to pre-select on start-up. Must be one of _poweroff_, _reboot_, _suspend_, _hibernate_, _logout_, _reload_, _lock_, or _switch-user_.
 
-*--poweroff-text* <text>
+*--poweroff-name* <name>
 	Text for poweroff action.
 
-*--reboot-text* <text>
+*--reboot-name* <name>
 	Text for reboot action.
 
-*--suspend-text* <text>
+*--suspend-name* <name>
 	Text for suspend action.
 
-*--hibernate-text* <text>
+*--hibernate-name* <name>
 	Text for hibernate action.
 
-*--logout-text* <text>
+*--logout-name* <name>
 	Text for logout action.
 
-*--lock-text* <text>
+*--lock-name* <name>
 	Text for lock action.
 
-*--switch-user-text* <text>
+*--switch-user-name* <name>
 	Text for switch user action.
 
 *--poweroff-icon* <icon>

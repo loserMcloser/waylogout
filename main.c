@@ -989,15 +989,14 @@ static int parse_options(int argc, char **argv, struct waylogout_state *state,
 		LO_SELECTION_LABEL,
 		LO_HIDE_CANCEL,
 		LO_REVERSE_ARROWS,
-		LO_TEXT_POWEROFF,
-		LO_TEXT_REBOOT,
-		LO_TEXT_SUSPEND,
-		LO_TEXT_HIBERNATE,
-		LO_TEXT_LOGOUT,
-		LO_TEXT_RELOAD,
-		LO_TEXT_LOCK,
-		LO_TEXT_SWITCH,
-		LO_TEXT_SCROLL_SENSITIVITY,
+		LO_NAME_POWEROFF,
+		LO_NAME_REBOOT,
+		LO_NAME_SUSPEND,
+		LO_NAME_HIBERNATE,
+		LO_NAME_LOGOUT,
+		LO_NAME_RELOAD,
+		LO_NAME_LOCK,
+		LO_NAME_SWITCH,
 		LO_ICON_POWEROFF,
 		LO_ICON_REBOOT,
 		LO_ICON_SUSPEND,
@@ -1006,7 +1005,6 @@ static int parse_options(int argc, char **argv, struct waylogout_state *state,
 		LO_ICON_RELOAD,
 		LO_ICON_LOCK,
 		LO_ICON_SWITCH,
-		LO_ICON_SCROLL_SENSITIVITY,
 		LO_COMMAND_POWEROFF,
 		LO_COMMAND_REBOOT,
 		LO_COMMAND_SUSPEND,
@@ -1068,14 +1066,14 @@ static int parse_options(int argc, char **argv, struct waylogout_state *state,
 		{"effect-custom", required_argument, NULL, LO_EFFECT_CUSTOM},
 		{"time-effects", no_argument, NULL, LO_TIME_EFFECTS},
 		{"fade-in", required_argument, NULL, LO_FADE_IN},
-		{"poweroff-text", required_argument, NULL, LO_TEXT_POWEROFF},
-		{"reboot-text", required_argument, NULL, LO_TEXT_REBOOT},
-		{"suspend-text", required_argument, NULL, LO_TEXT_SUSPEND},
-		{"hibernate-text", required_argument, NULL, LO_TEXT_HIBERNATE},
-		{"logout-text", required_argument, NULL, LO_TEXT_LOGOUT},
-		{"reload-text", required_argument, NULL, LO_TEXT_RELOAD},
-		{"lock-text", required_argument, NULL, LO_TEXT_LOCK},
-		{"switch-user-text", required_argument, NULL, LO_TEXT_SWITCH},
+		{"poweroff-name", required_argument, NULL, LO_NAME_POWEROFF},
+		{"reboot-name", required_argument, NULL, LO_NAME_REBOOT},
+		{"suspend-name", required_argument, NULL, LO_NAME_SUSPEND},
+		{"hibernate-name", required_argument, NULL, LO_NAME_HIBERNATE},
+		{"logout-name", required_argument, NULL, LO_NAME_LOGOUT},
+		{"reload-name", required_argument, NULL, LO_NAME_RELOAD},
+		{"lock-name", required_argument, NULL, LO_NAME_LOCK},
+		{"switch-user-name", required_argument, NULL, LO_NAME_SWITCH},
 		{"poweroff-icon", required_argument, NULL, LO_ICON_POWEROFF},
 		{"reboot-icon", required_argument, NULL, LO_ICON_REBOOT},
 		{"suspend-icon", required_argument, NULL, LO_ICON_SUSPEND},
@@ -1203,20 +1201,20 @@ static int parse_options(int argc, char **argv, struct waylogout_state *state,
 		    "Command to run when \"switch user\" action is activated.\n"
 		"  --default-action <action-name>  "
 		    "Action to pre-select on start.\n"
-		"  --poweroff-text <text>     "
-		    "Text for \"poweroff\" action.\n"
-		"  --reboot-text <text>       "
-		    "Text for \"reboot\" action.\n"
-		"  --suspend-text <text>      "
-		    "Text for \"suspend\" action.\n"
-		"  --hibernate-text <text>    "
-		    "Text for \"hibernate\" action.\n"
-		"  --logout-text <text>       "
-		    "Text for \"logout\" action.\n"
-		"  --lock-text <text>         "
-		    "Text for \"lock\" action.\n"
-		"  --switch-user-text <text>  "
-		    "Text for \"switch user\" action.\n"
+		"  --poweroff-name <name>     "
+		    "Name for \"poweroff\" action.\n"
+		"  --reboot-name <name>       "
+		    "Name for \"reboot\" action.\n"
+		"  --suspend-name <name>      "
+		    "Name for \"suspend\" action.\n"
+		"  --hibernate-name <name>    "
+		    "Name for \"hibernate\" action.\n"
+		"  --logout-name <name>       "
+		    "Name for \"logout\" action.\n"
+		"  --lock-name <name>         "
+		    "Name for \"lock\" action.\n"
+		"  --switch-user-name <name>  "
+		    "Name for \"switch user\" action.\n"
 		"  --poweroff-icon <icon>     "
 		    "Icon for \"poweroff\" action.\n"
 		"  --reboot-icon <icon>       "
@@ -1503,37 +1501,37 @@ static int parse_options(int argc, char **argv, struct waylogout_state *state,
 				state->args.fade_in = parse_seconds(optarg);
 			}
 			break;
-		case LO_TEXT_POWEROFF:
+		case LO_NAME_POWEROFF:
 			if (state)
-				state->args.text_poweroff = strdup(optarg);
+				state->args.name_poweroff = strdup(optarg);
 			break;
-		case LO_TEXT_REBOOT:
+		case LO_NAME_REBOOT:
 			if (state)
-				state->args.text_reboot = strdup(optarg);
+				state->args.name_reboot = strdup(optarg);
 			break;
-		case LO_TEXT_SUSPEND:
+		case LO_NAME_SUSPEND:
 			if (state)
-				state->args.text_suspend = strdup(optarg);
+				state->args.name_suspend = strdup(optarg);
 			break;
-		case LO_TEXT_HIBERNATE:
+		case LO_NAME_HIBERNATE:
 			if (state)
-				state->args.text_hibernate = strdup(optarg);
+				state->args.name_hibernate = strdup(optarg);
 			break;
-		case LO_TEXT_LOGOUT:
+		case LO_NAME_LOGOUT:
 			if (state)
-				state->args.text_logout = strdup(optarg);
+				state->args.name_logout = strdup(optarg);
 			break;
-		case LO_TEXT_RELOAD:
+		case LO_NAME_RELOAD:
 			if (state)
-				state->args.text_reload = strdup(optarg);
+				state->args.name_reload = strdup(optarg);
 			break;
-		case LO_TEXT_LOCK:
+		case LO_NAME_LOCK:
 			if (state)
-				state->args.text_lock = strdup(optarg);
+				state->args.name_lock = strdup(optarg);
 			break;
-		case LO_TEXT_SWITCH:
+		case LO_NAME_SWITCH:
 			if (state)
-				state->args.text_switch = strdup(optarg);
+				state->args.name_switch = strdup(optarg);
 			break;
 		case LO_ICON_REBOOT:
 			if (state)
@@ -1767,14 +1765,14 @@ int main(int argc, char **argv) {
     .command_reload = NULL,
     .command_lock = NULL,
     .command_switch = NULL,
-    .text_poweroff = "power off",
-    .text_reboot = "reboot",
-    .text_suspend = "sleep",
-    .text_hibernate = "hibernate",
-    .text_logout = "logout",
-    .text_reload = "reload",
-    .text_lock = "lock",
-    .text_switch = "switch",
+    .name_poweroff = "power off",
+    .name_reboot = "reboot",
+    .name_suspend = "sleep",
+    .name_hibernate = "hibernate",
+    .name_logout = "logout",
+    .name_reload = "reload",
+    .name_lock = "lock",
+    .name_switch = "switch",
     .icon_poweroff = "",
     .icon_reboot = "",
     .icon_suspend = "",
@@ -1845,7 +1843,7 @@ int main(int argc, char **argv) {
     add_action(
       &state,
       WL_ACTION_POWEROFF,
-      state.args.text_poweroff,
+      state.args.name_poweroff,
       state.args.icon_poweroff,
       state.args.command_poweroff,
       state.args.shortcut_poweroff
@@ -1855,7 +1853,7 @@ int main(int argc, char **argv) {
     add_action(
       &state,
       WL_ACTION_REBOOT,
-      state.args.text_reboot,
+      state.args.name_reboot,
       state.args.icon_reboot,
       state.args.command_reboot,
       state.args.shortcut_reboot
@@ -1865,7 +1863,7 @@ int main(int argc, char **argv) {
     add_action(
       &state,
       WL_ACTION_SUSPEND,
-      state.args.text_suspend,
+      state.args.name_suspend,
       state.args.icon_suspend,
       state.args.command_suspend,
       state.args.shortcut_suspend
@@ -1875,7 +1873,7 @@ int main(int argc, char **argv) {
     add_action(
       &state,
       WL_ACTION_HIBERNATE,
-      state.args.text_hibernate,
+      state.args.name_hibernate,
       state.args.icon_hibernate,
       state.args.command_hibernate,
       state.args.shortcut_hibernate
@@ -1885,7 +1883,7 @@ int main(int argc, char **argv) {
     add_action(
       &state,
       WL_ACTION_LOGOUT,
-      state.args.text_logout,
+      state.args.name_logout,
       state.args.icon_logout,
       state.args.command_logout,
       state.args.shortcut_logout
@@ -1895,7 +1893,7 @@ int main(int argc, char **argv) {
     add_action(
       &state,
       WL_ACTION_RELOAD,
-      state.args.text_reload,
+      state.args.name_reload,
       state.args.icon_reload,
       state.args.command_reload,
       state.args.shortcut_reload
@@ -1905,7 +1903,7 @@ int main(int argc, char **argv) {
     add_action(
       &state,
       WL_ACTION_LOCK,
-      state.args.text_lock,
+      state.args.name_lock,
       state.args.icon_lock,
       state.args.command_lock,
       state.args.shortcut_lock
@@ -1915,7 +1913,7 @@ int main(int argc, char **argv) {
     add_action(
       &state,
       WL_ACTION_SWITCH,
-      state.args.text_switch,
+      state.args.name_switch,
       state.args.icon_switch,
       state.args.command_switch,
       state.args.shortcut_switch
