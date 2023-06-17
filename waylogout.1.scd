@@ -63,46 +63,46 @@ Command to run when the hibernate action is activated.
 *--default-action* <action-name>
 	Action to pre-select on start-up. Must be one of _poweroff_, _reboot_, _suspend_, _hibernate_, _logout_, _reload_, _lock_, or _switch-user_.
 
-*--poweroff-text* <command>
+*--poweroff-text* <text>
 	Text for poweroff action.
 
-*--reboot-text* <command>
+*--reboot-text* <text>
 	Text for reboot action.
 
-*--suspend-text* <command>
+*--suspend-text* <text>
 	Text for suspend action.
 
-*--hibernate-text* <command>
+*--hibernate-text* <text>
 	Text for hibernate action.
 
-*--logout-text* <command>
+*--logout-text* <text>
 	Text for logout action.
 
-*--lock-text* <command>
+*--lock-text* <text>
 	Text for lock action.
 
-*--switch-user-text* <command>
+*--switch-user-text* <text>
 	Text for switch user action.
 
-*--poweroff-icon* <command>
+*--poweroff-icon* <icon>
 	Icon for poweroff action.
 
-*--reboot-icon* <command>
+*--reboot-icon* <icon>
 	Icon for reboot action.
 
-*--suspend-icon* <command>
+*--suspend-icon* <icon>
 	Icon for suspend action.
 
-*--hibernate-icon* <command>
+*--hibernate-icon* <icon>
 	Icon for hibernate action.
 
-*--logout-icon* <command>
+*--logout-icon* <icon>
 	Icon for logout action.
 
-*--lock-icon* <command>
+*--lock-icon* <icon>
 	Icon for lock action.
 
-*--switch-user-icon* <command>
+*--switch-user-icon* <icon>
 	Icon for switch user action.
 
 # APPEARANCE
