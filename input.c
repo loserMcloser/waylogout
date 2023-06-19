@@ -283,6 +283,11 @@ void waylogout_handle_key(struct waylogout_state *state,
 			if (action_iter->shortcut == keysym) {
 				state->selected_action = action_iter;
 				damage_state(state);
+
+				if(state->args.instant_run) {
+						run_action(state->selected_action); // just returns if selected_action is NULL
+        }
+
 				break;
 			}
 	}

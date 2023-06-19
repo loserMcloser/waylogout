@@ -997,7 +997,8 @@ static int parse_options(int argc, char **argv, struct waylogout_state *state,
 		LO_COMMAND_RELOAD,
 		LO_COMMAND_LOCK,
 		LO_COMMAND_SWITCH,
-		LO_COMMAND_SCROLL_SENSITIVITY,
+		LO_SCROLL_SENSITIVITY,
+		LO_INSTANT_RUN,
 	};
 
 	static struct option long_options[] = {
@@ -1052,7 +1053,8 @@ static int parse_options(int argc, char **argv, struct waylogout_state *state,
 		{"default-action", required_argument, NULL, LO_DEFAULT_ACTION},
 		{"hide-cancel", no_argument, NULL, LO_HIDE_CANCEL},
 		{"reverse-arrows", no_argument, NULL, LO_REVERSE_ARROWS},
-		{"scroll-sensitivity", required_argument, NULL, LO_COMMAND_SCROLL_SENSITIVITY},
+		{"scroll-sensitivity", required_argument, NULL, LO_SCROLL_SENSITIVITY},
+		{"instant-run", no_argument, NULL, LO_INSTANT_RUN},
 		{0, 0, 0, 0}
 	};
 
@@ -1159,6 +1161,8 @@ static int parse_options(int argc, char **argv, struct waylogout_state *state,
 		"  --scroll-sensitivity <amount>    "
 		    "How fast selected action will change when scrolling with mouse/touch. "
 			"Lower is faster; default is 8.\n"
+		"  --instant-run                    "
+			"Instantly run actions on key press, without confirmation with enter key.\n"
 		"\n"
 		"All <color> options are of the form <rrggbb[aa]>.\n";
 	int c;
@@ -1506,9 +1510,13 @@ static int parse_options(int argc, char **argv, struct waylogout_state *state,
 			if (state)
 				state->args.reverse_arrows = true;
 			break;
-		case LO_COMMAND_SCROLL_SENSITIVITY:
+		case LO_SCROLL_SENSITIVITY:
 			if (state)
 				state->args.scroll_sensitivity = atoi(optarg);
+			break;
+		case LO_INSTANT_RUN:
+			if (state)
+				state->args.instant_run = true;
 			break;
 		default:
 			fprintf(stderr, "%s", usage);
@@ -1628,6 +1636,7 @@ int main(int argc, char **argv) {
 		.override_indicator_x_position = false,
 		.override_indicator_y_position = false,
 		.scroll_sensitivity = 8,
+		.instant_run = false,
 		.labels = false,
 		.selection_label = false,
 		.hide_cancel = false,

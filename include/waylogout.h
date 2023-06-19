@@ -39,6 +39,7 @@ struct waylogout_args {
 	uint32_t indicator_y_position;
 	uint32_t indicator_sep;
 	uint32_t scroll_sensitivity;
+	bool instant_run;
 	bool override_indicator_x_position;
 	bool override_indicator_y_position;
 	bool labels;

@@ -43,6 +43,7 @@ _waylogout()
     --indicator-y-position
     --inside-color
     --inside-selection-color
+    --instant-run
     --label-font-size
     --labels
     --line-color

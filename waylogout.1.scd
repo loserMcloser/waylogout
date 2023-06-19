@@ -36,6 +36,9 @@ Provides you with graphical set of options to logout/suspend/poweroff/etc in you
 *--scroll-sensitivity* <amount>
 	How fast selected action will change when scrolling with mouse/touch. Lower is faster; default is 8.
 
+*--instant-run*
+	Instantly run actions on key press, without confirmation with enter key.
+
 *--poweroff-command* <command>
 	Command to run when the poweroff action is activated.
 

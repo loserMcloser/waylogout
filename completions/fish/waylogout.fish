@@ -38,6 +38,7 @@ complete -c waylogout -l ring-selection-color        --description "Sets the col
 complete -c waylogout -l scaling                -s s --description "Image scaling mode."
 complete -c waylogout -l screenshots            -s S --description "Display a screenshot."
 complete -c waylogout -l scroll-sensitivity          --description "How fast selected action will change when scrolling with mouse/touch."
+complete -c waylogout -l instant-run                 --description "Instantly run actions on key press, without confirmation with enter key."
 complete -c waylogout -l selection-label             --description "Show action label for selected action."
 complete -c waylogout -l suspend-command             --description "Command to run when the suspend action is activated."
 complete -c waylogout -l switch-user-command         --description "Command to run when the switch-user action is activated."
