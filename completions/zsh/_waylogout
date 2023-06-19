@@ -27,6 +27,7 @@ _arguments -s \
 	'(--indicator-y-position)'--indicator-y-position'[Sets the vertical centre position of the action indicator array]' \
 	'(--inside-color)'--inside-color'[Sets the color of the inside of the indicator]:color:' \
 	'(--inside-selection-color)'--inside-selection-color'[Sets the color of the inside of the selected action indicator]:color:' \
+	'(--instant-run)'--instant-run'[Instantly run actions on key press, without confirmation with enter key.]' \
 	'(--label-font-size)'--label-font-size'[Sets a fixed font size for the action label text]:size:' \
 	'(--labels -l)'{--labels,-l}'[Always show action labels]' \
 	'(--line-color)'--line-color'[Sets the color of the line between the inside and ring]:color:' \
