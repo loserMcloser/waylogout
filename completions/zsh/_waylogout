@@ -18,6 +18,9 @@ _arguments -s \
 	'(--font)'--font'[Sets the font of the text]:font:' \
 	'(--help -h)'{--help,-h}'[Show help message and quit]' \
 	'(--hibernate-command)'--hibernate-command'[Command to run when the hibernate action is activated]:command:' \
+	'(--hibernate-icon)'--hibernate-icon'[Icon for hibernate action]:command:' \
+	'(--hibernate-name)'--hibernate-name'[Name for hibernate action]:command:' \
+	'(--hibernate-shortcut)'--hibernate-shortcut'[Shortcut for hibernate action]:command:' \
 	'(--hide-cancel)'--hide-cancel'[Hide the cancel action]' \
 	'(--image -i)'{--image,-i}'[Display the given image, optionally only on the given output]:filename:_files' \
 	'(--indicator-radius)'--indicator-radius'[Sets the indicator radius]:radius:' \
@@ -34,9 +37,21 @@ _arguments -s \
 	'(--line-uses-inside -n)'{--line-uses-inside,-n}'[Use the inside color for the line between the inside and ring]' \
 	'(--line-uses-ring -r)'{--line-uses-ring,-r}'[Use the ring color for the line between the inside and ring]' \
 	'(--lock-command)'--lock-command'[Command to run when the lock action is activated]:command:' \
+	'(--lock-icon)'--lock-icon'[Icon for lock action]:command:' \
+	'(--lock-name)'--lock-name'[Name for lock action]:command:' \
+	'(--lock-shortcut)'--lock-shortcut'[Shortcut for lock action]:command:' \
 	'(--logout-command)'--logout-command'[Command to run when the logout action is activated]:command:' \
+	'(--logout-icon)'--logout-icon'[Icon for logout action]:command:' \
+	'(--logout-name)'--logout-name'[Name for logout action]:command:' \
+	'(--logout-shortcut)'--logout-shortcut'[Shortcut for logout action]:command:' \
 	'(--poweroff-command)'--poweroff-command'[Command to run when the poweroff action is activated]:command:' \
+	'(--poweroff-icon)'--poweroff-icon'[Icon for poweroff action]:command:' \
+	'(--poweroff-name)'--poweroff-name'[Name for poweroff action]:command:' \
+	'(--poweroff-shortcut)'--poweroff-shortcut'[Shortcut for poweroff action]:command:' \
 	'(--reboot-command)'--reboot-command'[Command to run when the reboot action is activated]:command:' \
+	'(--reboot-icon)'--reboot-icon'[Icon for reboot action]:command:' \
+	'(--reboot-name)'--reboot-name'[Name for reboot action]:command:' \
+	'(--reboot-shortcut)'--reboot-shortcut'[Shortcut for reboot action]:command:' \
 	'(--ring-color)'--ring-color'[Sets the color of the ring of the indicator]:color:' \
 	'(--ring-selection-color)'--ring-selection-color'[Sets the color of the ring of the indicator in the selected action]:color:' \
 	'(--scaling -s)'{--scaling,-s}'[Image scaling mode: stretch, fill, fit, center, tile, solid_color]:mode:(stretch fill fit center tile solid_color)' \
@@ -44,7 +59,13 @@ _arguments -s \
 	'(--scroll-sensitivity)'--scroll-sensitivity'[How fast selected action will change when scrolling with mouse/touch]:amount:' \
 	'(--selection-label)'--selection-label'[Show action label for selected action]' \
 	'(--suspend-command)'--suspend-command'[Command to run when the suspend action is activated]:command:' \
-	'(--switch-user-command)'--switch-user-command'[Command to run when the switch-user action is activated]:command:' \
+	'(--suspend-icon)'--suspend-icon'[Icon for suspend action]:command:' \
+	'(--suspend-name)'--suspend-name'[Name for suspend action]:command:' \
+	'(--suspend-shortcut)'--suspend-shortcut'[Shortcut for suspend action]:command:' \
+  '(--switch-user-command)'--switch-user-command'[Command to run when the switch-user action is activated]:command:' \
+	'(--switch-user-icon)'--switch-user-icon'[Icon for switch-user action]:command:' \
+	'(--switch-user-name)'--switch-user-name'[Name for switch-user action]:command:' \
+	'(--switch-user-shortcut)'--switch-user-shortcut'[Shortcut for switch-user action]:command:' \
 	'(--symbol-font-size)'--symbol-font-size'[Sets a fixed font size for the action symbols]:size:' \
 	'(--text-color)'--text-color'[Sets the color of the text]:color:' \
 	'(--text-selection-color)'--text-selection-color'[Sets the color of the text for the selected action indicator]:color:' \

@@ -34,6 +34,9 @@ _waylogout()
     --font
     --help
     --hibernate-command
+    --hibernate-icon
+    --hibernate-name
+    --hibernate-shortcut
     --hide-cancel
     --image
     --indicator-radius
@@ -50,9 +53,21 @@ _waylogout()
     --line-uses-inside
     --line-uses-ring
     --lock-command
+    --lock-icon
+    --lock-name
+    --lock-shortcut
     --logout-command
+    --logout-icon
+    --logout-name
+    --logout-shortcut
     --poweroff-command
+    --poweroff-icon
+    --poweroff-name
+    --poweroff-shortcut
     --reboot-command
+    --reboot-icon
+    --reboot-name
+    --reboot-shortcut
     --ring-color
     --ring-selection-color
     --scaling
@@ -60,7 +75,13 @@ _waylogout()
     --scroll-sensitivity
     --selection-label
     --suspend-command
+    --suspend-icon
+    --suspend-name
+    --suspend-shortcut
     --switch-user-command
+    --switch-user-icon
+    --switch-user-name
+    --switch-user-shortcut
     --symbol-font-size
     --text-color
     --text-selection-color
