@@ -272,8 +272,7 @@ void render_frames(struct waylogout_surface *surface) {
 	if (indicator_sep < 0)
 		indicator_sep = fr_common.arc_thickness;
 
-	// TODO should this be divided by surface->scale ?
-	fr_common.x_offset = fr_common.indicator_diameter + indicator_sep;
+	fr_common.x_offset = (fr_common.indicator_diameter + indicator_sep) / surface->scale;
 
 	fr_common.x_center = (state->args.override_indicator_x_position)
 			? state->args.indicator_x_position
