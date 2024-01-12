@@ -265,8 +265,8 @@ void render_frames(struct waylogout_surface *surface) {
 
 	int n_actions = wl_list_length(&state->actions);
 	int indicator_sep = (state->args.indicator_sep > 0)
-	  ? state->args.indicator_sep
-	  : (surface->width - n_actions * fr_common.indicator_diameter)
+	  ? (int) state->args.indicator_sep
+	  : (int) (surface->width * surface->scale - n_actions * fr_common.indicator_diameter)
 	    / (n_actions + 1)
 	;
 	if (indicator_sep < 0)
