@@ -27,13 +27,13 @@ This is the command used to make the screenshot.
 		--inside-selection-color=33cc3366 \
 		--text-selection-color=eaeaeaaa \
 		--line-selection-color=00000000 \
-		--lock-command="echo lock" \
-		--logout-command="echo logout" \
-		--suspend-command="echo suspend" \
-		--hibernate-command="echo hibernate" \
-		--poweroff-command="echo poweroff" \
-		--reboot-command="echo reboot" \
-		--switch-user-command="echo switch" \
+		--lock-command="echo 'Demo mode, lock command not configured. See man page.'" \
+		--logout-command="echo 'Demo mode, logout command not configured. See man page.'" \
+		--suspend-command="echo 'Demo mode, suspend command not configured. See man page.'" \
+		--hibernate-command="echo 'Demo mode, hibernate command not configured. See man page.'" \
+		--poweroff-command="echo 'Demo mode, poweroff command not configured. See man page.'" \
+		--reboot-command="echo 'Demo mode, reboot command not configured. See man page.'" \
+		--switch-user-command="echo 'Demo mode, switch-user command not configured. See man page.'" \
 		--selection-label
 
 ## Installation
