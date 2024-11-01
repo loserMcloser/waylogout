@@ -4,13 +4,6 @@
 #include "seat.h"
 #include "waylogout.h"
 
-void run_action(struct waylogout_action *action) {
-	if (!action)
-		return;
-	char *const cmd[] = { "sh", "-c", action->command, NULL, };
-	execvp(cmd[0], cmd);
-}
-
 void select_first_action(struct waylogout_state *state) {
 	state->selected_action =
 			wl_container_of(state->actions.next, state->selected_action, link);
@@ -70,7 +63,7 @@ void waylogout_handle_mouse_enter(struct waylogout_state *state,
 	struct waylogout_action *action_iter;
 	wl_list_for_each(action_iter, &state->actions, link)
 		if (surface == action_iter->child_surface) {
-			state->hover.action = action_iter;
+			state->hovered_action = action_iter;
 			mouse_enter_motion_selection(state, action_iter,
 					wl_fixed_to_int(x), wl_fixed_to_int(y));
 			break;
@@ -82,9 +75,9 @@ void waylogout_handle_mouse_leave(struct waylogout_state *state,
 	struct waylogout_action *action_iter;
 	wl_list_for_each(action_iter, &state->actions, link)
 		if (surface == action_iter->child_surface) {
-			if (action_iter == state->hover.action) {
-				state->hover.action = NULL;
-				state->hover.mouse_down = false;
+			if (action_iter == state->hovered_action) {
+				state->hovered_action = NULL;
+				state->selected_action_depressed = false;
 			}
 			if (action_iter == state->selected_action) {
 				state->selected_action = NULL;
@@ -98,7 +91,7 @@ void waylogout_handle_mouse_motion(struct waylogout_state *state,
 		wl_fixed_t x, wl_fixed_t y) {
 	struct waylogout_action *action_iter;
 	wl_list_for_each(action_iter, &state->actions, link)
-		if (action_iter == state->hover.action) {
+		if (action_iter == state->hovered_action) {
 			mouse_enter_motion_selection(state, action_iter,
 					wl_fixed_to_int(x), wl_fixed_to_int(y));
 			break;
@@ -120,18 +113,19 @@ void waylogout_handle_mouse_scroll(struct waylogout_state *state,
 void waylogout_handle_mouse_button(struct waylogout_state *state,
 			uint32_t button, uint32_t btn_state) {
 	if (button == BTN_LEFT) {
-		if (state->hover.action && state->hover.action == state->selected_action) {
+		if (state->hovered_action && state->hovered_action == state->selected_action) {
 			if (btn_state) {  // pressed
-				state->hover.mouse_down = true;
+				state->selected_action_depressed = true;
 				damage_state(state);
 			} else {
-				state->hover.mouse_down = false;
-				damage_state(state);
-				run_action(state->selected_action); // just returns if selected_action is NULL
+				state->run_action_now = true;
 			}
 		}
-	} else if (button == BTN_MIDDLE && state->selected_action)
-		run_action(state->selected_action); // just returns if selected_action is NULL
+	} else if (button == BTN_MIDDLE && state->selected_action) {
+		state->selected_action_depressed = true;
+		damage_state(state);
+		state->run_action_now = true;
+	}
 }
 
 void waylogout_handle_touch_down(struct waylogout_state *state,
@@ -153,7 +147,7 @@ void waylogout_handle_touch_up(struct waylogout_state *state, int32_t id) {
 	if (id != state->touch.id)
 		return;
 	if (state->selected_action == state->touch.action)
-		run_action(state->selected_action);
+		state->run_action_now = true;
 }
 
 void waylogout_handle_touch_motion(struct waylogout_state *state,
@@ -172,7 +166,11 @@ void waylogout_handle_key(struct waylogout_state *state,
 	switch (keysym) {
 	case XKB_KEY_KP_Enter: /* fallthrough */
 	case XKB_KEY_Return:
-		run_action(state->selected_action); // just returns if selected_action is NULL
+		if (state->selected_action) {
+			state->selected_action_depressed = true;
+			damage_state(state);
+			state->run_action_now = true;
+		}
 		break;
 	case XKB_KEY_Escape:
 		state->run_display = false;
@@ -282,12 +280,10 @@ void waylogout_handle_key(struct waylogout_state *state,
 		wl_list_for_each(action_iter, &state->actions, link)
 			if (action_iter->shortcut == keysym) {
 				state->selected_action = action_iter;
+				if (state->args.instant_run)
+					state->selected_action_depressed = true;
 				damage_state(state);
-
-				if(state->args.instant_run) {
-						run_action(state->selected_action); // just returns if selected_action is NULL
-        }
-
+				state->run_action_now = state->args.instant_run;
 				break;
 			}
 	}

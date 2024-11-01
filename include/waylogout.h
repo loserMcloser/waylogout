@@ -74,6 +74,7 @@ struct waylogout_action {
 	char symbol[8];
 	char *command;
 	xkb_keysym_t shortcut;
+	bool rendered_depressed;
 	struct wl_surface *child_surface; // surface made into subsurface
 	struct wl_subsurface *subsurface;
 	struct waylogout_surface *parent_surface;
@@ -87,10 +88,12 @@ struct waylogout_touch {
 	int32_t id;
 };
 
+/*
 struct waylogout_hover {
 	struct waylogout_action *action;
 	bool mouse_down;
 };
+*/
 
 struct waylogout_state {
 	struct loop *eventloop;
@@ -108,13 +111,15 @@ struct waylogout_state {
 	struct waylogout_args args;
 	struct wl_list actions;
 	struct waylogout_action *selected_action;
-	struct waylogout_hover hover;
+	/* struct waylogout_hover hover; */
+	struct waylogout_action *hovered_action;
 	struct waylogout_touch touch;
 	wl_fixed_t scroll_amount;
 	struct waylogout_xkb xkb;
-	int render_randnum;
 	size_t n_screenshots_done;
 	bool run_display;
+	bool selected_action_depressed;
+	bool run_action_now;
 	struct zxdg_output_manager_v1 *zxdg_output_manager;
 };
 

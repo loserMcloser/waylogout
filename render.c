@@ -107,8 +107,9 @@ void render_frame(struct waylogout_action *action,
 	int subsurf_ycenter = fr_common.y_center -
 			(state->args.radius + state->args.thickness);
 
-	if (selected && state->hover.mouse_down &&
-			state->hover.action == state->selected_action) {
+	bool will_render_depressed = false;
+	if (selected && state->selected_action_depressed) {
+		will_render_depressed = true;
 		subsurf_xcenter += 2;
 		subsurf_ycenter += 2;
 	}
@@ -247,6 +248,8 @@ void render_frame(struct waylogout_action *action,
 	wl_surface_commit(action->child_surface);
 
 	wl_surface_commit(surface->surface);
+
+	action->rendered_depressed = will_render_depressed;
 
 }
 

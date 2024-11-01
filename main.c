@@ -8,6 +8,7 @@
 #include <string.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
+#include <time.h>
 #include <wayland-client.h>
 #include <wayland-cursor.h>
 #include <wordexp.h>
@@ -882,6 +883,7 @@ static void add_action(struct waylogout_state *state,
 		new_action->command = strdup(cmd);
 	}
 	new_action->shortcut = shortcut;
+	new_action->rendered_depressed = false;
 
 	for (size_t i = 0; i < 2; ++i)
 		new_action->indicator_buffers[i] = (struct pool_buffer){
@@ -949,6 +951,12 @@ static void set_default_action(struct waylogout_state *state) {
 		waylogout_log(LOG_ERROR, "Requested default action is %s, but that action has not been configured", state->args.default_action);
 }
 
+void run_action(struct waylogout_action *action) {
+	if (!action)
+		return;
+	char *const cmd[] = { "sh", "-c", action->command, NULL, };
+	execvp(cmd[0], cmd);
+}
 
 static int parse_options(int argc, char **argv, struct waylogout_state *state,
 		enum line_mode *line_mode, char **config_path) {
@@ -1617,6 +1625,8 @@ int main(int argc, char **argv) {
 	waylogout_log_init(LOG_ERROR);
 	srand(time(NULL));
 	enum line_mode line_mode = LM_LINE;
+	state.selected_action_depressed = false;
+	state.run_action_now = false;
 	state.args = (struct waylogout_args){
 		.mode = BACKGROUND_MODE_FILL,
 		.font = strdup("sans-serif"),
@@ -1646,8 +1656,7 @@ int main(int argc, char **argv) {
 	set_default_colors(&state.args.colors);
 
 	state.selected_action = NULL;
-	state.hover.action = NULL;
-	state.hover.mouse_down = false;
+	state.hovered_action = NULL;
 	state.touch.action = NULL;
 	state.touch.id = 0;
 	state.scroll_amount = 0;
@@ -1755,6 +1764,14 @@ int main(int argc, char **argv) {
 		errno = 0;
 		if (wl_display_flush(state.display) == -1 && errno != EAGAIN) {
 			break;
+		}
+		if (state.selected_action && state.run_action_now && state.selected_action->rendered_depressed) {
+			/* 0.2s delay */
+			struct timespec ts;
+			ts.tv_sec = 0;
+			ts.tv_nsec = 200000000;
+			nanosleep(&ts, NULL);
+			run_action(state.selected_action);
 		}
 		loop_poll(state.eventloop);
 	}
