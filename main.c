@@ -18,7 +18,6 @@
 #include "pool-buffer.h"
 #include "seat.h"
 #include "waylogout.h"
-#include "wlr-input-inhibitor-unstable-v1-client-protocol.h"
 #include "wlr-layer-shell-unstable-v1-client-protocol.h"
 #include "wlr-screencopy-unstable-v1-client-protocol.h"
 #include "xdg-output-unstable-v1-client-protocol.h"
@@ -698,9 +697,6 @@ static void handle_global(void *data, struct wl_registry *registry,
 	} else if (strcmp(interface, zwlr_layer_shell_v1_interface.name) == 0) {
 		state->layer_shell = wl_registry_bind(
 				registry, name, &zwlr_layer_shell_v1_interface, 1);
-	} else if (strcmp(interface, zwlr_input_inhibit_manager_v1_interface.name) == 0) {
-		state->input_inhibit_manager = wl_registry_bind(
-				registry, name, &zwlr_input_inhibit_manager_v1_interface, 1);
 	} else if (strcmp(interface, zxdg_output_manager_v1_interface.name) == 0) {
 		state->zxdg_output_manager = wl_registry_bind(
 				registry, name, &zxdg_output_manager_v1_interface, 2);
@@ -1724,20 +1720,6 @@ int main(int argc, char **argv) {
 	wl_registry_add_listener(registry, &registry_listener, &state);
 	wl_display_roundtrip(state.display);
 	assert(state.compositor && state.layer_shell && state.shm);
-	if (!state.input_inhibit_manager) {
-		free(state.args.font);
-		waylogout_log(LOG_ERROR, "Compositor does not support the input "
-				"inhibitor protocol, refusing to run insecurely");
-		return 1;
-	}
-
-	zwlr_input_inhibit_manager_v1_get_inhibitor(state.input_inhibit_manager);
-	if (wl_display_roundtrip(state.display) == -1) {
-		free(state.args.font);
-		waylogout_log(LOG_ERROR, "Exiting - failed to inhibit input:"
-				" is a lockscreen already running?");
-		return 2;
-	}
 
 	// Need to apply effects to all images loaded with --image
 	struct waylogout_image *iter_image, *temp;
