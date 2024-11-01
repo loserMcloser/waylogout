@@ -176,7 +176,7 @@ Action indicators will only appear for actions where a command has been specifie
 	Base and factor should be numbers between 0 and 1.
 
 *--effect-compose* <position>;<size>;<gravity>;<path>
-	Overlay another image to your lock screen.
+	Overlay another image to your logout screen.
 	The _position_, _size_ and _gravity_ part is optional.
 
 *--effect-custom* <path>

@@ -4,7 +4,7 @@ complete -c waylogout -l color                  -s c --description "Turn the scr
 complete -c waylogout -l config                 -s C --description "Path to the config file."
 complete -c waylogout -l debug                  -s d --description "Enable debugging output."
 complete -c waylogout -l effect-blur                 --description "Blur displayed images."
-complete -c waylogout -l effect-compose              --description "Overlay another image to your lock screen."
+complete -c waylogout -l effect-compose              --description "Overlay another image to your logout screen."
 complete -c waylogout -l effect-custom               --description "Load a custom effect from a shared object."
 complete -c waylogout -l effect-greyscale            --description "Make the displayed image greyscale."
 complete -c waylogout -l effect-pixelate             --description "Pixelate displayed images."

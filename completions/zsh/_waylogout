@@ -8,7 +8,7 @@ _arguments -s \
 	'(--config -C)'{--config,-C}'[Path to the config file]:filename:_files' \
 	'(--debug -d)'{--debug,-d}'[Enable debugging output]' \
 	'(--effect-blur)'--effect-blur'[Blur displayed images]' \
-	'(--effect-compose)'--effect-compose'[Overlay another image to your lock screen]' \
+	'(--effect-compose)'--effect-compose'[Overlay another image to your logout screen]' \
 	'(--effect-custom)'--effect-custom'[Load a custom effect from a shared object]' \
 	'(--effect-greyscale)'--effect-greyscale)'[Make the displayed image greyscale]' \
 	'(--effect-pixelate)'--effect-pixelate)'[Pixelate displayed images]' \
