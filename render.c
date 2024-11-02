@@ -147,10 +147,7 @@ void render_frame(struct waylogout_action *action,
 	double relative_xcenter = buffer_width / 2.0f;
 	double relative_ycenter = fr_common.indicator_diameter / 2.0f;
 
-	// Splitting up inner circle fill from ring stroke to avoid the two-tone ring affect.
-	// https://github.com/swaywm/swaylock/issues/113
-
-	// Draw inner circle
+	// Fill inner circle
 	cairo_set_line_width(cairo, 0);
 	cairo_arc(cairo, relative_xcenter, relative_ycenter,
 			fr_common.arc_radius - fr_common.arc_thickness / 2, 0, 2 * M_PI);
