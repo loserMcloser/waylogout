@@ -59,14 +59,15 @@ endforeach
 wayland_client = dependency('wayland-client')
 wayland_cursor = dependency('wayland-cursor')
 wayland_protos = dependency('wayland-protocols', version: '>=1.14')
-xkbcommon      = dependency('xkbcommon')
-cairo          = dependency('cairo')
-gdk_pixbuf     = dependency('gdk-pixbuf-2.0', required: get_option('gdk-pixbuf'))
-bash_comp      = dependency('bash-completion', required: false)
-fish_comp      = dependency('fish', required: false)
-math           = cc.find_library('m')
-rt             = cc.find_library('rt')
-dl             = cc.find_library('dl')
+wayland_scanner = dependency('wayland-scanner', version: '>=1.15.0', native: true)
+xkbcommon = dependency('xkbcommon')
+cairo = dependency('cairo')
+omp = dependency('openmp')
+gdk_pixbuf = dependency('gdk-pixbuf-2.0', required: get_option('gdk-pixbuf'))
+bash_comp = dependency('bash-completion', required: false)
+fish_comp = dependency('fish', required: false)
+math = cc.find_library('m')
+rt = cc.find_library('rt')
 
 git = find_program('git', required: false)
 scdoc = find_program('scdoc', required: get_option('man-pages'))
@@ -140,7 +141,6 @@ dependencies = [
 	gdk_pixbuf,
 	math,
 	rt,
-	dl,
 	xkbcommon,
 	wayland_client,
 	wayland_cursor,
