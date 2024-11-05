@@ -74,12 +74,16 @@ struct waylogout_action {
 	char *command;
 	xkb_keysym_t shortcut;
 	bool rendered_depressed;
-	struct wl_surface *child_surface; // surface made into subsurface
+	struct pool_buffer indicator_buffers[2];
+	uint32_t indicator_width, indicator_height;  // TODO why does every action need to store this?
+	struct wl_list link;
+};
+
+struct waylogout_action_surface {
+	struct waylogout_action *action;
+	struct wl_surface *surface; // surface made into subsurface
 	struct wl_subsurface *subsurface;
 	struct waylogout_surface *parent_surface;
-	struct pool_buffer indicator_buffers[2];
-	uint32_t indicator_width, indicator_height;
-	struct wl_list link;
 };
 
 struct waylogout_touch {
@@ -111,7 +115,7 @@ struct waylogout_state {
 	struct wl_list actions;
 	struct waylogout_action *selected_action;
 	/* struct waylogout_hover hover; */
-	struct waylogout_action *hovered_action;
+	struct waylogout_action_surface *hovered_surface;
 	struct waylogout_touch touch;
 	wl_fixed_t scroll_amount;
 	struct waylogout_xkb xkb;
@@ -136,6 +140,7 @@ struct waylogout_surface {
 	struct wl_output *output;
 	uint32_t output_global_name;
 	struct wl_surface *surface;
+	struct wl_array children;
 	struct zwlr_layer_surface_v1 *layer_surface;
 	struct zwlr_screencopy_frame_v1 *screencopy_frame;
 	struct pool_buffer buffers[2];

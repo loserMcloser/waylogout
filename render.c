@@ -119,7 +119,14 @@ void render_frame(struct waylogout_action *action,
 		subsurf_ycenter += 2;
 	}
 
-	wl_subsurface_set_position(action->subsurface, subsurf_xcenter, subsurf_ycenter);
+	// find child surface for this action
+	struct waylogout_action_surface *action_surface;
+	wl_array_for_each(action_surface, &surface->children) {
+		if (action_surface->action == action)
+			break;
+	}
+
+	wl_subsurface_set_position(action_surface->subsurface, subsurf_xcenter, subsurf_ycenter);
 
 	struct pool_buffer *buffer = get_next_buffer(state->shm,
 			action->indicator_buffers, buffer_width, buffer_height);
@@ -239,10 +246,10 @@ void render_frame(struct waylogout_action *action,
 		return;
 	}
 
-	wl_surface_set_buffer_scale(action->child_surface, surface->scale);
-	wl_surface_attach(action->child_surface, buffer->buffer, 0, 0);
-	wl_surface_damage_buffer(action->child_surface, 0, 0, INT32_MAX, INT32_MAX);
-	wl_surface_commit(action->child_surface);
+	wl_surface_set_buffer_scale(action_surface->surface, surface->scale);
+	wl_surface_attach(action_surface->surface, buffer->buffer, 0, 0);
+	wl_surface_damage_buffer(action_surface->surface, 0, 0, INT32_MAX, INT32_MAX);
+	wl_surface_commit(action_surface->surface);
 
 	wl_surface_commit(surface->surface);
 

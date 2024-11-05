@@ -42,11 +42,13 @@ void select_prev_action(struct waylogout_state *state) {
 	damage_state(state);
 }
 
-void mouse_enter_motion_selection(struct waylogout_state *state,
-		struct waylogout_action *action, int x, int y) {
+void mouse_enter_motion_selection(struct waylogout_state *state, int x, int y) {
+	if (!state->hovered_surface)
+		return;
+	struct waylogout_action *action = state->hovered_surface->action;
 	int x_diff = (x - action->indicator_width / 2);
 	int y_diff = (y - action->indicator_width / 2);
-	int radius = (state->args.radius + state->args.thickness / 2) * action->parent_surface->scale;
+	int radius = (state->args.radius + state->args.thickness / 2) * state->hovered_surface->parent_surface->scale;
 	if (x_diff * x_diff + y_diff * y_diff < radius * radius) {
 		state->selected_action = action;
 		damage_state(state);
@@ -59,43 +61,45 @@ void mouse_enter_motion_selection(struct waylogout_state *state,
 }
 
 void waylogout_handle_mouse_enter(struct waylogout_state *state,
-		struct wl_surface *surface, wl_fixed_t x, wl_fixed_t y) {
-	struct waylogout_action *action_iter;
-	wl_list_for_each(action_iter, &state->actions, link)
-		if (surface == action_iter->child_surface) {
-			state->hovered_action = action_iter;
-			mouse_enter_motion_selection(state, action_iter,
-					wl_fixed_to_int(x), wl_fixed_to_int(y));
-			break;
+		struct wl_surface *wl_surface, wl_fixed_t x, wl_fixed_t y) {
+	struct waylogout_surface *surface;
+	wl_list_for_each(surface, &state->surfaces, link) {
+		struct waylogout_action_surface *action_surface;
+		wl_array_for_each(action_surface, &surface->children) {
+			if (wl_surface == action_surface->surface) {
+				state->hovered_surface = action_surface;
+				mouse_enter_motion_selection(state, wl_fixed_to_int(x), wl_fixed_to_int(y));
+				return;
+			}
 		}
+	}
 }
 
 void waylogout_handle_mouse_leave(struct waylogout_state *state,
-		struct wl_surface *surface) {
-	struct waylogout_action *action_iter;
-	wl_list_for_each(action_iter, &state->actions, link)
-		if (surface == action_iter->child_surface) {
-			if (action_iter == state->hovered_action) {
-				state->hovered_action = NULL;
-				state->selected_action_depressed = false;
+		struct wl_surface *wl_surface) {
+	struct waylogout_surface *surface;
+	wl_list_for_each(surface, &state->surfaces, link) {
+		struct waylogout_action_surface *action_surface;
+		wl_array_for_each(action_surface, &surface->children) {
+			if (wl_surface == action_surface->surface) {
+				if (action_surface == state->hovered_surface) {
+					state->hovered_surface = NULL;
+					state->selected_action_depressed = false;
+				}
+				if (action_surface->action == state->selected_action) {
+					state->selected_action = NULL;
+					damage_state(state);
+				}
 			}
-			if (action_iter == state->selected_action) {
-				state->selected_action = NULL;
-				damage_state(state);
-			}
-			break;
+			return;
 		}
+	}
 }
 
 void waylogout_handle_mouse_motion(struct waylogout_state *state,
 		wl_fixed_t x, wl_fixed_t y) {
-	struct waylogout_action *action_iter;
-	wl_list_for_each(action_iter, &state->actions, link)
-		if (action_iter == state->hovered_action) {
-			mouse_enter_motion_selection(state, action_iter,
-					wl_fixed_to_int(x), wl_fixed_to_int(y));
-			break;
-		}
+	if (state->hovered_surface)
+		mouse_enter_motion_selection(state, wl_fixed_to_int(x), wl_fixed_to_int(y));
 }
 
 void waylogout_handle_mouse_scroll(struct waylogout_state *state,
@@ -113,7 +117,7 @@ void waylogout_handle_mouse_scroll(struct waylogout_state *state,
 void waylogout_handle_mouse_button(struct waylogout_state *state,
 			uint32_t button, uint32_t btn_state) {
 	if (button == BTN_LEFT) {
-		if (state->hovered_action && state->hovered_action == state->selected_action) {
+		if (state->hovered_surface && state->hovered_surface->action == state->selected_action) {
 			if (btn_state) {  // pressed
 				state->selected_action_depressed = true;
 				damage_state(state);
@@ -129,18 +133,22 @@ void waylogout_handle_mouse_button(struct waylogout_state *state,
 }
 
 void waylogout_handle_touch_down(struct waylogout_state *state,
-		struct wl_surface *surface, int32_t id, wl_fixed_t x, wl_fixed_t y) {
-	struct waylogout_action *action_iter;
-	wl_list_for_each(action_iter, &state->actions, link)
-		if (surface == action_iter->child_surface) {
-			state->touch = (struct waylogout_touch) {
-				.action = action_iter,
-				.id = id
-			};
-			mouse_enter_motion_selection(state, action_iter,
-					wl_fixed_to_int(x), wl_fixed_to_int(y));
-			break;
+		struct wl_surface *wl_surface, int32_t id, wl_fixed_t x, wl_fixed_t y) {
+	struct waylogout_surface *surface;
+	wl_list_for_each(surface, &state->surfaces, link) {
+		struct waylogout_action_surface *action_surface;
+		wl_array_for_each(action_surface, &surface->children) {
+			if (wl_surface == action_surface->surface) {
+				state->hovered_surface = action_surface;
+				state->touch = (struct waylogout_touch) {
+					.action = action_surface->action,
+					.id = id
+				};
+				mouse_enter_motion_selection(state, wl_fixed_to_int(x), wl_fixed_to_int(y));
+				return;
+			}
 		}
+	}
 }
 
 void waylogout_handle_touch_up(struct waylogout_state *state, int32_t id) {
@@ -154,8 +162,7 @@ void waylogout_handle_touch_motion(struct waylogout_state *state,
 		int32_t id, wl_fixed_t x, wl_fixed_t y) {
 	if (id != state->touch.id)
 		return;
-	mouse_enter_motion_selection(state, state->touch.action,
-			wl_fixed_to_int(x), wl_fixed_to_int(y));
+	mouse_enter_motion_selection(state, wl_fixed_to_int(x), wl_fixed_to_int(y));
 }
 
 void waylogout_handle_key(struct waylogout_state *state,

@@ -236,16 +236,20 @@ static void create_surface(struct waylogout_surface *surface) {
 	surface->surface = wl_compositor_create_surface(state->compositor);
 	assert(surface->surface);
 
+	wl_array_init(&surface->children);
 	struct waylogout_action *action_iter;
 	wl_list_for_each(action_iter, &state->actions, link) {
-		action_iter->child_surface = wl_compositor_create_surface(state->compositor);
-		assert(action_iter->child_surface);
-		action_iter->subsurface = wl_subcompositor_get_subsurface(
-				state->subcompositor, action_iter->child_surface,
+		struct waylogout_action_surface *new_child =
+			(struct waylogout_action_surface *) wl_array_add(&surface->children, sizeof(struct waylogout_action_surface));
+		new_child->action = action_iter;
+		new_child->parent_surface = surface;
+		new_child->surface = wl_compositor_create_surface(state->compositor);
+		assert(new_child->surface);
+		new_child->subsurface = wl_subcompositor_get_subsurface(
+				state->subcompositor, new_child->surface,
 				surface->surface);
-		action_iter->parent_surface = surface;
-		assert(action_iter->subsurface);
-		wl_subsurface_set_sync(action_iter->subsurface);
+		assert(new_child->subsurface);
+		wl_subsurface_set_sync(new_child->subsurface);
 	}
 
 	surface->layer_surface = zwlr_layer_shell_v1_get_layer_surface(
@@ -1645,7 +1649,7 @@ int main(int argc, char **argv) {
 	set_default_colors(&state.args.colors);
 
 	state.selected_action = NULL;
-	state.hovered_action = NULL;
+	state.hovered_surface = NULL;
 	state.touch.action = NULL;
 	state.touch.id = 0;
 	state.scroll_amount = 0;
