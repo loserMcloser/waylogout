@@ -1,16 +1,28 @@
+#include <math.h>
+#include <stdlib.h>
+#include <time.h>
+#include <locale.h>
 #include <wayland-client.h>
 #include "cairo.h"
 #include "background-image.h"
 #include "waylogout.h"
 
+// glib might or might not have already defined MIN,
+// depending on whether we have pixbuf or not...
+#ifndef MIN
+#define MIN(a, b) ((a) < (b) ? (a) : (b))
+#endif
+
 #define M_PI 3.14159265358979323846
+const float TYPE_INDICATOR_RANGE = M_PI / 3.0f;
+const float TYPE_INDICATOR_BORDER_THICKNESS = M_PI / 128.0f;
 
 static void set_color_for_state(cairo_t *cairo, bool selected,
 		struct waylogout_colorset *colorset) {
 	cairo_set_source_u32(cairo, selected ? colorset->selected : colorset->normal);
 }
 
-void render_frame_background(struct waylogout_surface *surface) {
+void render_frame_background(struct waylogout_surface *surface, bool commit) {
 	struct waylogout_state *state = surface->state;
 
 	int buffer_width = surface->width * surface->scale;
@@ -19,71 +31,64 @@ void render_frame_background(struct waylogout_surface *surface) {
 		return; // not yet configured
 	}
 
-	surface->current_buffer = get_next_buffer(state->shm,
+	struct pool_buffer *buffer = get_next_buffer(state->shm,
 			surface->buffers, buffer_width, buffer_height);
-	if (surface->current_buffer == NULL) {
+	if (buffer == NULL) {
 		return;
 	}
 
-	cairo_t *cairo = surface->current_buffer->cairo;
+	cairo_t *cairo = buffer->cairo;
 	cairo_set_antialias(cairo, CAIRO_ANTIALIAS_BEST);
 
 	cairo_save(cairo);
 	cairo_set_operator(cairo, CAIRO_OPERATOR_SOURCE);
 	cairo_set_source_u32(cairo, state->args.colors.background);
+	cairo_pattern_set_filter(cairo_get_source(cairo), CAIRO_FILTER_BILINEAR);
 	cairo_paint(cairo);
 	if (surface->image && state->args.mode != BACKGROUND_MODE_SOLID_COLOR) {
 		cairo_set_operator(cairo, CAIRO_OPERATOR_OVER);
-		render_background_image(cairo, surface->image,
-			state->args.mode, buffer_width, buffer_height);
+		if (fade_is_complete(&surface->fade)) {
+			if (!surface->scaled_image) {
+				surface->scaled_image =
+					scale_background_image(surface->image, state->args.mode,
+						buffer_width, buffer_height);
+			}
+			render_background_image(cairo, surface->scaled_image, 1);
+		} else {
+			if (!surface->screencopy.scaled_image) {
+				surface->screencopy.scaled_image =
+					scale_background_image(surface->screencopy.original_image,
+						 state->args.mode, buffer_width, buffer_height);
+			}
+			render_background_image(cairo, surface->screencopy.scaled_image, 1);
+			if (!surface->scaled_image) {
+				surface->scaled_image =
+					scale_background_image(surface->image, state->args.mode,
+						buffer_width, buffer_height);
+			}
+			render_background_image(cairo, surface->scaled_image, surface->fade.alpha);
+		}
 	}
 	cairo_restore(cairo);
 	cairo_identity_matrix(cairo);
 
 	wl_surface_set_buffer_scale(surface->surface, surface->scale);
-	wl_surface_attach(surface->surface, surface->current_buffer->buffer, 0, 0);
+	wl_surface_attach(surface->surface, buffer->buffer, 0, 0);
 	wl_surface_damage_buffer(surface->surface, 0, 0, INT32_MAX, INT32_MAX);
-	wl_surface_commit(surface->surface);
+	if (commit) {
+		wl_surface_commit(surface->surface);
+	}
 }
 
 void render_background_fade(struct waylogout_surface *surface, uint32_t time) {
-	struct waylogout_state *state = surface->state;
-
-	int buffer_width = surface->width * surface->scale;
-	int buffer_height = surface->height * surface->scale;
-	if (buffer_width == 0 || buffer_height == 0) {
-		return; // not yet configured
-	}
-
 	if (fade_is_complete(&surface->fade)) {
 		return;
 	}
 
-	surface->current_buffer = get_next_buffer(state->shm,
-			surface->buffers, buffer_width, buffer_height);
-	if (surface->current_buffer == NULL) {
-		return;
-	}
+	fade_update(&surface->fade, time);
 
-	fade_update(&surface->fade, surface->current_buffer, time);
-
-	wl_surface_set_buffer_scale(surface->surface, surface->scale);
-	wl_surface_attach(surface->surface, surface->current_buffer->buffer, 0, 0);
-	wl_surface_damage(surface->surface, 0, 0, surface->width, surface->height);
-	wl_surface_commit(surface->surface);
-}
-
-void render_background_fade_prepare(struct waylogout_surface *surface, struct pool_buffer *buffer) {
-	if (fade_is_complete(&surface->fade)) {
-		return;
-	}
-
-	fade_prepare(&surface->fade, buffer);
-
-	wl_surface_set_buffer_scale(surface->surface, surface->scale);
-	wl_surface_attach(surface->surface, surface->current_buffer->buffer, 0, 0);
-	wl_surface_damage(surface->surface, 0, 0, surface->width, surface->height);
-	wl_surface_commit(surface->surface);
+	render_frame_background(surface, true);
+	render_frames(surface);
 }
 
 void render_frame(struct waylogout_action *action,
@@ -116,18 +121,13 @@ void render_frame(struct waylogout_action *action,
 
 	wl_subsurface_set_position(action->subsurface, subsurf_xcenter, subsurf_ycenter);
 
-	// TODO should each action get its own current_buffer pointer?
-	surface->current_buffer = get_next_buffer(state->shm,
+	struct pool_buffer *buffer = get_next_buffer(state->shm,
 			action->indicator_buffers, buffer_width, buffer_height);
-	if (surface->current_buffer == NULL) {
+	if (buffer == NULL) {
 		return;
 	}
 
-	// Hide subsurface until we want it visible
-	wl_surface_attach(action->child_surface, NULL, 0, 0);
-	wl_surface_commit(action->child_surface);
-
-	cairo_t *cairo = surface->current_buffer->cairo;
+	cairo_t *cairo = buffer->cairo;
 	cairo_set_antialias(cairo, CAIRO_ANTIALIAS_BEST);
 	cairo_font_options_t *fo = cairo_font_options_create();
 	cairo_font_options_set_hint_style(fo, CAIRO_HINT_STYLE_FULL);
@@ -232,15 +232,15 @@ void render_frame(struct waylogout_action *action,
 	new_width += surface->scale - (new_width % surface->scale);
 
 	if (buffer_width != new_width || buffer_height != new_height) {
-		destroy_buffer(surface->current_buffer);
+		destroy_buffer(buffer);
 		action->indicator_width = new_width;
 		action->indicator_height = new_height;
-		render_frame(action, surface, fr_common);
+		render_frames(surface);
 		return;
 	}
 
 	wl_surface_set_buffer_scale(action->child_surface, surface->scale);
-	wl_surface_attach(action->child_surface, surface->current_buffer->buffer, 0, 0);
+	wl_surface_attach(action->child_surface, buffer->buffer, 0, 0);
 	wl_surface_damage_buffer(action->child_surface, 0, 0, INT32_MAX, INT32_MAX);
 	wl_surface_commit(action->child_surface);
 

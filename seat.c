@@ -1,5 +1,7 @@
 #include <assert.h>
+#include <stdlib.h>
 #include <sys/mman.h>
+#include <unistd.h>
 #include <xkbcommon/xkbcommon.h>
 #include "log.h"
 #include "waylogout.h"
@@ -84,10 +86,13 @@ static void keyboard_modifiers(void *data, struct wl_keyboard *wl_keyboard,
 		uint32_t mods_locked, uint32_t group) {
 	struct waylogout_seat *seat = data;
 	struct waylogout_state *state = seat->state;
+	if (state->xkb.state == NULL) {
+		return;
+	}
 	xkb_state_update_mask(state->xkb.state,
 		mods_depressed, mods_latched, mods_locked, 0, 0, group);
-	// state->xkb.shift = xkb_state_mod_name_is_active(state->xkb.state,
-	// 	XKB_MOD_NAME_SHIFT,
+	// state->xkb.control = xkb_state_mod_name_is_active(state->xkb.state,
+	// 	XKB_MOD_NAME_CTRL,
 	// 	XKB_STATE_MODS_DEPRESSED | XKB_STATE_MODS_LATCHED);
 }
 

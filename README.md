@@ -4,7 +4,9 @@ waylogout is graphical logout/suspend/reboot/shutdown dialog for wayland.
 It is inspired by
 [oblogout](https://launchpad.net/oblogout)
 and based on code from
-[swaylock-effects](https://github.com/mortie/swaylock-effects).
+* Jakub Jirutka's fork of [swaylock-effects](https://github.com/jirutka/swaylock-effects)
+* Martin Dørum's [swaylock-effects](https://github.com/mortie/swaylock-effects)
+* Drew DeVault's [swaylock](https://github.com/swaywm/swaylock)
 
 ![Screenshot](/screenshot.png)
 

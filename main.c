@@ -5,10 +5,13 @@
 #include <getopt.h>
 #include <poll.h>
 #include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <time.h>
+#include <unistd.h>
 #include <wayland-client.h>
 #include <wayland-cursor.h>
 #include <wordexp.h>
@@ -21,7 +24,6 @@
 #include "waylogout.h"
 #include "wlr-layer-shell-unstable-v1-client-protocol.h"
 #include "wlr-screencopy-unstable-v1-client-protocol.h"
-#include "xdg-output-unstable-v1-client-protocol.h"
 
 // returns a positive integer in milliseconds
 static uint32_t parse_seconds(const char *seconds) {
@@ -62,7 +64,6 @@ static uint32_t parse_color(const char *color) {
 	return res;
 }
 
-// TODO might not need this
 static const char *parse_screen_pos(const char *str, struct waylogout_effect_screen_pos *pos) {
 	char *eptr;
 	float res = strtof(str, &eptr);
@@ -79,7 +80,6 @@ static const char *parse_screen_pos(const char *str, struct waylogout_effect_scr
 	}
 }
 
-// TODO might not need this
 static const char *parse_screen_pos_pair(const char *str, char delim,
 		struct waylogout_effect_screen_pos *pos1,
 		struct waylogout_effect_screen_pos *pos2) {
@@ -205,7 +205,6 @@ static void destroy_surface(struct waylogout_surface *surface) {
 		destroy_buffer(&action_iter->indicator_buffers[0]);
 		destroy_buffer(&action_iter->indicator_buffers[1]);
 	}
-	fade_destroy(&surface->fade);
 	wl_output_destroy(surface->output);
 	free(surface);
 }
@@ -225,29 +224,14 @@ static bool surface_is_opaque(struct waylogout_surface *surface) {
 	return (surface->state->args.colors.background & 0xff) == 0xff;
 }
 
-struct zxdg_output_v1_listener _xdg_output_listener;
-
-static void create_layer_surface(struct waylogout_surface *surface) {
+static void create_surface(struct waylogout_surface *surface) {
 	struct waylogout_state *state = surface->state;
 
-	if (state->args.fade_in) {
+	if (state->args.allow_fade && state->args.fade_in) {
 		surface->fade.target_time = state->args.fade_in;
 	}
 
 	surface->image = select_image(state, surface);
-
-	static bool has_printed_zxdg_error = false;
-	if (state->zxdg_output_manager) {
-		surface->xdg_output = zxdg_output_manager_v1_get_xdg_output(
-				state->zxdg_output_manager, surface->output);
-		zxdg_output_v1_add_listener(
-				surface->xdg_output, &_xdg_output_listener, surface);
-		surface->events_pending += 1;
-	} else if (!has_printed_zxdg_error) {
-		waylogout_log(LOG_INFO, "Compositor does not support zxdg output "
-				"manager, images assigned to named outputs will not work");
-		has_printed_zxdg_error = true;
-	}
 
 	surface->surface = wl_compositor_create_surface(state->compositor);
 	assert(surface->surface);
@@ -267,7 +251,6 @@ static void create_layer_surface(struct waylogout_surface *surface) {
 	surface->layer_surface = zwlr_layer_shell_v1_get_layer_surface(
 			state->layer_shell, surface->surface, surface->output,
 			ZWLR_LAYER_SHELL_V1_LAYER_OVERLAY, "logout_dialog");
-	assert(surface->layer_surface);
 
 	zwlr_layer_surface_v1_set_size(surface->layer_surface, 0, 0);
 	zwlr_layer_surface_v1_set_anchor(surface->layer_surface,
@@ -308,8 +291,7 @@ static void initially_render_surface(struct waylogout_surface *surface) {
 		wl_region_destroy(region);
 	}
 
-	render_frame_background(surface);
-	render_background_fade_prepare(surface, surface->current_buffer);
+	render_frame_background(surface, true);
 	render_frames(surface);
 }
 
@@ -331,7 +313,6 @@ static void layer_surface_configure(void *data,
 		initially_render_surface(surface);
 	}
 	surface->configured = true;
-
 }
 
 static void layer_surface_closed(void *data,
@@ -376,6 +357,11 @@ static const struct wl_callback_listener surface_frame_listener = {
 };
 
 void damage_surface(struct waylogout_surface *surface) {
+	if (surface->width == 0 || surface->height == 0) {
+		// Not yet configured
+		return;
+	}
+
 	surface->dirty = true;
 	if (surface->frame_pending) {
 		return;
@@ -412,10 +398,6 @@ static void handle_wl_output_mode(void *data, struct wl_output *output,
 	// Who cares
 }
 
-static void handle_wl_output_done(void *data, struct wl_output *output) {
-	// Who cares
-}
-
 static void handle_wl_output_scale(void *data, struct wl_output *output,
 		int32_t factor) {
 	waylogout_trace();
@@ -425,13 +407,6 @@ static void handle_wl_output_scale(void *data, struct wl_output *output,
 		damage_surface(surface);
 	}
 }
-
-struct wl_output_listener _wl_output_listener = {
-	.geometry = handle_wl_output_geometry,
-	.mode = handle_wl_output_mode,
-	.done = handle_wl_output_done,
-	.scale = handle_wl_output_scale,
-};
 
 static struct wl_buffer *create_shm_buffer(struct wl_shm *shm, enum wl_shm_format fmt,
 		int width, int height, int stride, void **data_out) {
@@ -579,17 +554,18 @@ static void handle_screencopy_frame_ready(void *data,
 			surface->screencopy.transform);
 	if (image == NULL) {
 		waylogout_log(LOG_ERROR, "Failed to create image from screenshot");
+		state->args.screenshots = false;
+		state->args.fade_in = 0; // Fade in is not possible without screenshot
 	} else  {
-		surface->screencopy.image->cairo_surface =
-			apply_effects(image, state, surface->scale);
-		surface->image = surface->screencopy.image->cairo_surface;
+		surface->screencopy.original_image = cairo_surface_duplicate(image);
+		surface->screencopy.image->cairo_surface = image;
+		if (state->args.screenshots) {
+			waylogout_log(LOG_DEBUG, "Loaded screenshot for output %s", surface->output_name);
+			wl_list_insert(&state->images, &surface->screencopy.image->link);
+		}
 	}
 
-	waylogout_log(LOG_DEBUG, "Loaded screenshot for output %s", surface->output_name);
-	wl_list_insert(&state->images, &surface->screencopy.image->link);
-	if (--surface->events_pending == 0) {
-		initially_render_surface(surface);
-	}
+	--surface->events_pending;
 }
 
 static void handle_screencopy_frame_failed(void *data,
@@ -597,10 +573,10 @@ static void handle_screencopy_frame_failed(void *data,
 	waylogout_trace();
 	struct waylogout_surface *surface = data;
 	waylogout_log(LOG_ERROR, "Screencopy failed");
+	surface->state->args.screenshots = false;
+	surface->state->args.fade_in = 0; // Fade in is not possible without screenshot
 
-	if (--surface->events_pending == 0) {
-		initially_render_surface(surface);
-	}
+	--surface->events_pending;
 }
 
 static const struct zwlr_screencopy_frame_v1_listener screencopy_frame_listener = {
@@ -610,69 +586,49 @@ static const struct zwlr_screencopy_frame_v1_listener screencopy_frame_listener 
 	.failed = handle_screencopy_frame_failed,
 };
 
-static void handle_xdg_output_logical_size(void *data, struct zxdg_output_v1 *output,
-		int width, int height) {
-	// Who cares
-}
-
-static void handle_xdg_output_logical_position(void *data,
-		struct zxdg_output_v1 *output, int x, int y) {
-	// Who cares
-}
-
-static void handle_xdg_output_name(void *data, struct zxdg_output_v1 *output,
+static void handle_wl_output_name(void *data, struct wl_output *output,
 		const char *name) {
 	waylogout_trace();
 	waylogout_log(LOG_DEBUG, "output name is %s", name);
 	struct waylogout_surface *surface = data;
-	surface->xdg_output = output;
 	surface->output_name = strdup(name);
 }
 
-static void handle_xdg_output_description(void *data, struct zxdg_output_v1 *output,
+static void handle_wl_output_description(void *data, struct wl_output *output,
 		const char *description) {
 	// Who cares
 }
 
-static void handle_xdg_output_done(void *data, struct zxdg_output_v1 *output) {
+static void handle_wl_output_done(void *data, struct wl_output *output) {
 	waylogout_trace();
 	struct waylogout_surface *surface = data;
 	struct waylogout_state *state = surface->state;
-	cairo_surface_t *new_image = select_image(surface->state, surface);
 
-	if (new_image == surface->image && state->args.screenshots) {
-		static bool has_printed_screencopy_error = false;
-		if (state->screencopy_manager) {
-			surface->screencopy_frame = zwlr_screencopy_manager_v1_capture_output(
-					state->screencopy_manager, false, surface->output);
-			zwlr_screencopy_frame_v1_add_listener(surface->screencopy_frame,
-					&screencopy_frame_listener, surface);
-			surface->events_pending += 1;
-		} else if (!has_printed_screencopy_error) {
-			waylogout_log(LOG_INFO, "Compositor does not support screencopy manager, "
-					"screenshots will not work");
-			has_printed_screencopy_error = true;
-		}
-	} else if (new_image != NULL) {
-		if (state->args.screenshots) {
-			waylogout_log(LOG_DEBUG,
-					"Using existing image instead of taking a screenshot for output %s.",
-					surface->output_name);
-		}
-		surface->image = new_image;
+	static bool has_printed_screencopy_error = false;
+	if (state->screencopy_manager) {
+		surface->screencopy_frame = zwlr_screencopy_manager_v1_capture_output(
+				state->screencopy_manager, false, surface->output);
+		zwlr_screencopy_frame_v1_add_listener(surface->screencopy_frame,
+				&screencopy_frame_listener, surface);
+		surface->events_pending += 1;
+	} else if (!has_printed_screencopy_error) {
+		waylogout_log(LOG_INFO, "Compositor does not support screencopy manager, "
+				"screenshots / fade-in will not work");
+		state->args.screenshots = false;
+		state->args.fade_in = 0; // Fade in is not possible without screenshot
+		has_printed_screencopy_error = true;
 	}
 
-	if (--surface->events_pending == 0) {
-		initially_render_surface(surface);
-	}
+	--surface->events_pending;
 }
 
-struct zxdg_output_v1_listener _xdg_output_listener = {
-	.logical_position = handle_xdg_output_logical_position,
-	.logical_size = handle_xdg_output_logical_size,
-	.done = handle_xdg_output_done,
-	.name = handle_xdg_output_name,
-	.description = handle_xdg_output_description,
+struct wl_output_listener _wl_output_listener = {
+	.geometry = handle_wl_output_geometry,
+	.mode = handle_wl_output_mode,
+	.done = handle_wl_output_done,
+	.scale = handle_wl_output_scale,
+	.name = handle_wl_output_name,
+	.description = handle_wl_output_description,
 };
 
 static void handle_global(void *data, struct wl_registry *registry,
@@ -698,21 +654,18 @@ static void handle_global(void *data, struct wl_registry *registry,
 	} else if (strcmp(interface, zwlr_layer_shell_v1_interface.name) == 0) {
 		state->layer_shell = wl_registry_bind(
 				registry, name, &zwlr_layer_shell_v1_interface, 1);
-	} else if (strcmp(interface, zxdg_output_manager_v1_interface.name) == 0) {
-		state->zxdg_output_manager = wl_registry_bind(
-				registry, name, &zxdg_output_manager_v1_interface, 2);
 	} else if (strcmp(interface, wl_output_interface.name) == 0) {
 		struct waylogout_surface *surface =
 			calloc(1, sizeof(struct waylogout_surface));
 		surface->state = state;
 		surface->output = wl_registry_bind(registry, name,
-				&wl_output_interface, 3);
+				&wl_output_interface, 4);
 		surface->output_global_name = name;
 		wl_output_add_listener(surface->output, &_wl_output_listener, surface);
 		wl_list_insert(&state->surfaces, &surface->link);
 
 		if (state->run_display) {
-			create_layer_surface(surface);
+			create_surface(surface);
 			wl_display_roundtrip(state->display);
 		}
 	} else if (strcmp(interface, zwlr_screencopy_manager_v1_interface.name) == 0) {
@@ -769,6 +722,24 @@ static char *join_args(char **argv, int argc) {
 	return res;
 }
 
+static char *strdup_noquotes(char *input) {
+	if (input == NULL)
+		return NULL;
+	char *revised_input = input;
+	char quote_char = 0;
+	if (*input == '"')
+		quote_char = '"';
+	else if (*input == '\'')
+		quote_char = '\'';
+	if (quote_char) {
+		++revised_input;
+		char *end = strchr(revised_input, quote_char);
+		if (end)
+			*end = '\0';
+	}
+	return strdup(revised_input);
+}
+
 static void load_image(char *arg, struct waylogout_state *state) {
 	// [[<output>]:]<path>
 	struct waylogout_image *image = calloc(1, sizeof(struct waylogout_image));
@@ -776,10 +747,10 @@ static void load_image(char *arg, struct waylogout_state *state) {
 	if (separator) {
 		*separator = '\0';
 		image->output_name = separator == arg ? NULL : strdup(arg);
-		image->path = strdup(separator + 1);
+		image->path = strdup_noquotes(separator + 1);
 	} else {
 		image->output_name = NULL;
-		image->path = strdup(arg);
+		image->path = strdup_noquotes(arg);
 	}
 
 	struct waylogout_image *iter_image, *temp;
@@ -954,6 +925,8 @@ static void set_default_action(struct waylogout_state *state) {
 void run_action(struct waylogout_action *action) {
 	if (!action)
 		return;
+	waylogout_log(LOG_DEBUG, "Running %s action", action->label);
+	waylogout_log(LOG_DEBUG, "%s", action->command);
 	char *const cmd[] = { "sh", "-c", action->command, NULL, };
 	execvp(cmd[0], cmd);
 }
@@ -961,8 +934,7 @@ void run_action(struct waylogout_action *action) {
 static int parse_options(int argc, char **argv, struct waylogout_state *state,
 		enum line_mode *line_mode, char **config_path) {
 	enum long_option_codes {
-		LO_TRACE,
-		LO_FONT,
+		LO_FONT = 256,
 		LO_FA_FONT,
 		LO_SYMBOL_FONT_SIZE,
 		LO_LABEL_FONT_SIZE,
@@ -975,6 +947,7 @@ static int parse_options(int argc, char **argv, struct waylogout_state *state,
 		LO_INSIDE_COLOR,
 		LO_INSIDE_HL_COLOR,
 		LO_LINE_COLOR,
+		LO_LINE_WRONG_COLOR,
 		LO_LINE_HL_COLOR,
 		LO_RING_COLOR,
 		LO_RING_HL_COLOR,
@@ -1009,7 +982,7 @@ static int parse_options(int argc, char **argv, struct waylogout_state *state,
 		{"config", required_argument, NULL, 'C'},
 		{"color", required_argument, NULL, 'c'},
 		{"debug", no_argument, NULL, 'd'},
-		{"trace", no_argument, NULL, LO_TRACE},
+		{"trace", no_argument, NULL, 't'},
 		{"help", no_argument, NULL, 'h'},
 		{"image", required_argument, NULL, 'i'},
 		{"labels", no_argument, NULL, 'l'},
@@ -1017,7 +990,7 @@ static int parse_options(int argc, char **argv, struct waylogout_state *state,
 		{"line-uses-ring", no_argument, NULL, 'r'},
 		{"screenshots", no_argument, NULL, 'S'},
 		{"scaling", required_argument, NULL, 's'},
-		{"tiling", no_argument, NULL, 't'},
+		{"tiling", no_argument, NULL, 'T'},
 		{"version", no_argument, NULL, 'v'},
 		{"selection-label", no_argument, NULL, LO_SELECTION_LABEL},
 		{"font", required_argument, NULL, LO_FONT},
@@ -1080,10 +1053,10 @@ static int parse_options(int argc, char **argv, struct waylogout_state *state,
 		"  -l, --labels                     "
 			"Show action labels.\n"
 		"  -S, --screenshots                "
-			"Use a screenshots as the background image.\n"
+			"Use screenshots as the background images.\n"
 		"  -s, --scaling <mode>             "
 			"Image scaling mode: stretch, fill, fit, center, tile, solid_color.\n"
-		"  -t, --tiling                     "
+		"  -T, --tiling                     "
 			"Same as --scaling=tile.\n"
 		"  -v, --version                    "
 			"Show the version number and quit.\n"
@@ -1095,6 +1068,8 @@ static int parse_options(int argc, char **argv, struct waylogout_state *state,
 			"Sets the font of the action label text.\n"
 		"  --label-font-size <size>         "
 			"Sets a fixed font size for the action label text.\n"
+		"  --fa-font <font>                 "
+			"Sets the name of the Font Awesome font. Default is 'Font Awesome 6 Free'.\n"
 		"  --symbol-font-size <size>        "
 			"Sets a fixed font size for the action symbol.\n"
 		"  --indicator-radius <radius>      "
@@ -1169,11 +1144,12 @@ static int parse_options(int argc, char **argv, struct waylogout_state *state,
 			"Instantly run actions on key press, without confirmation with enter key.\n"
 		"\n"
 		"All <color> options are of the form <rrggbb[aa]>.\n";
+
 	int c;
 	optind = 1;
 	while (1) {
 		int opt_idx = 0;
-		c = getopt_long(argc, argv, "C:c:dhi:lnrSs:tv", long_options,
+		c = getopt_long(argc, argv, "c:dhi:Slnrs:tTvC:", long_options,
 				&opt_idx);
 		if (c == -1) {
 			break;
@@ -1192,7 +1168,7 @@ static int parse_options(int argc, char **argv, struct waylogout_state *state,
 		case 'd':
 			waylogout_log_init(LOG_DEBUG);
 			break;
-		case LO_TRACE:
+		case 't':
 			waylogout_log_init(LOG_TRACE);
 			break;
 		case 'i':
@@ -1245,13 +1221,13 @@ static int parse_options(int argc, char **argv, struct waylogout_state *state,
 		case LO_FONT:
 			if (state) {
 				free(state->args.font);
-				state->args.font = strdup(optarg);
+				state->args.font = strdup_noquotes(optarg);
 			}
 			break;
 		case LO_FA_FONT:
 			if (state) {
 				free(state->args.fa_font);
-				state->args.fa_font = strdup(optarg);
+				state->args.fa_font = strdup_noquotes(optarg);
 			}
 			break;
 		case LO_DEFAULT_ACTION:
@@ -1615,6 +1591,13 @@ static void display_in(int fd, short mask, void *data) {
 	}
 }
 
+static void end_allow_fade_period(void *data) {
+	struct waylogout_state *state = data;
+	if (state->args.allow_fade) {
+		state->args.allow_fade = false;
+	}
+}
+
 static void timer_render(void *data) {
 	struct waylogout_state *state = (struct waylogout_state *)data;
 	damage_state(state);
@@ -1650,8 +1633,14 @@ int main(int argc, char **argv) {
 		.screenshots = false,
 		.effects = NULL,
 		.effects_count = 0,
-	};
+		.allow_fade = true,
 
+		// TODO add options for custom action text
+		// .text_cleared = strdup("Cleared"),
+		// .text_caps_lock = strdup("Caps Lock"),
+		// .text_verifying = strdup("Verifying"),
+		// .text_wrong = strdup("Wrong"),
+	};
 	wl_list_init(&state.images);
 	set_default_colors(&state.args.colors);
 
@@ -1728,18 +1717,48 @@ int main(int argc, char **argv) {
 	struct wl_registry *registry = wl_display_get_registry(state.display);
 	wl_registry_add_listener(registry, &registry_listener, &state);
 	wl_display_roundtrip(state.display);
-	assert(state.compositor && state.layer_shell && state.shm);
 
-	// Need to apply effects to all images loaded with --image
+	if (!state.compositor) {
+		waylogout_log(LOG_ERROR, "Missing wl_compositor");
+		return 1;
+	}
+
+	if (!state.subcompositor) {
+		waylogout_log(LOG_ERROR, "Missing wl_subcompositor");
+		return 1;
+	}
+
+	if (!state.shm) {
+		waylogout_log(LOG_ERROR, "Missing wl_shm");
+		return 1;
+	}
+
+	struct waylogout_surface *surface;
+	// Enumerate all outputs so that screenshots can be obtained
+	wl_list_for_each(surface, &state.surfaces, link) {
+		surface->events_pending += 1;
+	};
+
+	wl_list_for_each(surface, &state.surfaces, link) {
+		while (surface->events_pending > 0) {
+			wl_display_roundtrip(state.display);
+		}
+	}
+
+	// Apply effects to all images
 	struct waylogout_image *iter_image, *temp;
 	wl_list_for_each_safe(iter_image, temp, &state.images, link) {
 		iter_image->cairo_surface = apply_effects(
 				iter_image->cairo_surface, &state, 1);
 	}
 
-	struct waylogout_surface *surface;
+	if (wl_display_roundtrip(state.display) == -1) {
+		free(state.args.font);
+		return 1;
+	}
+
 	wl_list_for_each(surface, &state.surfaces, link) {
-		create_layer_surface(surface);
+		create_surface(surface);
 	}
 
 	wl_list_for_each(surface, &state.surfaces, link) {
@@ -1755,6 +1774,10 @@ int main(int argc, char **argv) {
 			display_in, NULL);
 
 	loop_add_timer(state.eventloop, 1000, timer_render, &state);
+
+	if (state.args.fade_in) {
+		loop_add_timer(state.eventloop, state.args.fade_in, end_allow_fade_period, &state);
+	}
 
 	// Re-draw once to start the draw loop
 	damage_state(&state);

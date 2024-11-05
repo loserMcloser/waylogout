@@ -231,7 +231,7 @@ To activate the configured command for the selected action, press enter, or clic
 
 # AUTHORS
 
-Written by Jeremy Sylvestre, based on the codebase of swaylock-effects by Martin Dørum, which is in turn forked from upstream Swaylock by Drew DeVault.
+Written by Jeremy Sylvestre, based on the codebase of Jakub Jirutka's fork of swaylock-effects by Martin Dørum, which is in turn forked from swaylock by Drew DeVault.
 
 For more information about waylogout development, see
 https://github.com/loserMcloser/waylogout.

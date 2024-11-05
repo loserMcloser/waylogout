@@ -51,9 +51,8 @@ struct waylogout_args {
 	int effects_count;
 	bool time_effects;
 	uint32_t fade_in;
+	bool allow_fade;
 };
-
-struct waylogout_surface;
 
 enum waylogout_action_type {
 	WL_ACTION_NO_ACTION,
@@ -120,26 +119,26 @@ struct waylogout_state {
 	bool run_display;
 	bool selected_action_depressed;
 	bool run_action_now;
-	struct zxdg_output_manager_v1 *zxdg_output_manager;
 };
 
 struct waylogout_surface {
 	cairo_surface_t *image;
+	cairo_surface_t *scaled_image;
 	struct {
 		uint32_t format, width, height, stride;
 		enum wl_output_transform transform;
 		void *data;
+		cairo_surface_t *original_image;
+		cairo_surface_t *scaled_image;
 		struct waylogout_image *image;
 	} screencopy;
 	struct waylogout_state *state;
 	struct wl_output *output;
 	uint32_t output_global_name;
-	struct zxdg_output_v1 *xdg_output;
 	struct wl_surface *surface;
 	struct zwlr_layer_surface_v1 *layer_surface;
 	struct zwlr_screencopy_frame_v1 *screencopy_frame;
 	struct pool_buffer buffers[2];
-	struct pool_buffer *current_buffer;
 	struct waylogout_fade fade;
 	int events_pending;
 	bool configured;
@@ -176,7 +175,6 @@ struct waylogout_frame_common {
 	double label_font_size;
 };
 
-
 void waylogout_handle_key(struct waylogout_state *state,
 		xkb_keysym_t keysym, uint32_t codepoint);
 void waylogout_handle_mouse_enter(struct waylogout_state *state,
@@ -195,11 +193,8 @@ void waylogout_handle_touch_up(struct waylogout_state *state, int32_t id);
 void waylogout_handle_touch_motion(struct waylogout_state *state,
 		int32_t id, wl_fixed_t x, wl_fixed_t y);
 
-
-
-void render_frame_background(struct waylogout_surface *surface);
+void render_frame_background(struct waylogout_surface *surface, bool commit);
 void render_background_fade(struct waylogout_surface *surface, uint32_t time);
-void render_background_fade_prepare(struct waylogout_surface *surface, struct pool_buffer *buffer);
 void render_frame(struct waylogout_action *action,
 		struct waylogout_surface *surface,
 		struct waylogout_frame_common fr_common);

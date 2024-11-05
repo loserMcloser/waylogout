@@ -82,9 +82,9 @@ void loop_poll(struct loop *loop) {
 	}
 
 	int ret = poll(loop->fds, loop->fd_length, ms);
-		if (ret < 0) {
-			waylogout_log_errno(LOG_ERROR, "poll failed");
-			exit(1);
+	if (ret < 0 && errno != EINTR) {
+		waylogout_log_errno(LOG_ERROR, "poll failed");
+		exit(1);
 	}
 
 	// Dispatch fds
