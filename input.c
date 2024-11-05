@@ -43,12 +43,13 @@ void select_prev_action(struct waylogout_state *state) {
 }
 
 void mouse_enter_motion_selection(struct waylogout_state *state, int x, int y) {
-	if (!state->hovered_surface)
+	struct waylogout_action_surface *hovered_surface = state->hovered_surface;
+	if (!hovered_surface)
 		return;
-	struct waylogout_action *action = state->hovered_surface->action;
-	int x_diff = (x - action->indicator_width / 2);
-	int y_diff = (y - action->indicator_width / 2);
-	int radius = (state->args.radius + state->args.thickness / 2) * state->hovered_surface->parent_surface->scale;
+	struct waylogout_action *action = hovered_surface->action;
+	int x_diff = (x - hovered_surface->indicator_width / 2);
+	int y_diff = (y - hovered_surface->indicator_width / 2);
+	int radius = (state->args.radius + state->args.thickness / 2) * hovered_surface->parent_surface->scale;
 	if (x_diff * x_diff + y_diff * y_diff < radius * radius) {
 		state->selected_action = action;
 		damage_state(state);

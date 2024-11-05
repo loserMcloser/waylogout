@@ -75,7 +75,6 @@ struct waylogout_action {
 	xkb_keysym_t shortcut;
 	bool rendered_depressed;
 	struct pool_buffer indicator_buffers[2];
-	uint32_t indicator_width, indicator_height;  // TODO why does every action need to store this?
 	struct wl_list link;
 };
 
@@ -84,6 +83,7 @@ struct waylogout_action_surface {
 	struct wl_surface *surface; // surface made into subsurface
 	struct wl_subsurface *subsurface;
 	struct waylogout_surface *parent_surface;
+	uint32_t indicator_width, indicator_height;
 };
 
 struct waylogout_touch {

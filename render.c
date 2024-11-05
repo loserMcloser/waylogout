@@ -98,8 +98,15 @@ void render_frame(struct waylogout_action *action,
 
 	bool selected = (action == state->selected_action);
 
-	int buffer_width = action->indicator_width;
-	int buffer_height = action->indicator_height;
+	// find child surface for this action
+	struct waylogout_action_surface *action_surface;
+	wl_array_for_each(action_surface, &surface->children) {
+		if (action_surface->action == action)
+			break;
+	}
+
+	int buffer_width = action_surface->indicator_width;
+	int buffer_height = action_surface->indicator_height;
 	int new_width = fr_common.indicator_diameter;
 	int new_height = fr_common.indicator_diameter;
 
@@ -117,13 +124,6 @@ void render_frame(struct waylogout_action *action,
 		will_render_depressed = true;
 		subsurf_xcenter += 2;
 		subsurf_ycenter += 2;
-	}
-
-	// find child surface for this action
-	struct waylogout_action_surface *action_surface;
-	wl_array_for_each(action_surface, &surface->children) {
-		if (action_surface->action == action)
-			break;
 	}
 
 	wl_subsurface_set_position(action_surface->subsurface, subsurf_xcenter, subsurf_ycenter);
@@ -240,8 +240,8 @@ void render_frame(struct waylogout_action *action,
 
 	if (buffer_width != new_width || buffer_height != new_height) {
 		destroy_buffer(buffer);
-		action->indicator_width = new_width;
-		action->indicator_height = new_height;
+		action_surface->indicator_width = new_width;
+		action_surface->indicator_height = new_height;
 		render_frames(surface);
 		return;
 	}

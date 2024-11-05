@@ -306,10 +306,10 @@ static void layer_surface_configure(void *data,
 	struct waylogout_surface *surface = data;
 	surface->width = width;
 	surface->height = height;
-	struct waylogout_action *action_iter;
-	wl_list_for_each(action_iter, &surface->state->actions, link) {
-		action_iter->indicator_width = 0;
-		action_iter->indicator_height = 0;
+	struct waylogout_action_surface *action_surface;
+	wl_array_for_each(action_surface, &surface->children) {
+		action_surface->indicator_width = 0;
+		action_surface->indicator_height = 0;
 	}
 	zwlr_layer_surface_v1_ack_configure(layer_surface, serial);
 
