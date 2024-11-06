@@ -981,6 +981,8 @@ void run_action(struct waylogout_action *action) {
 	if (!action)
 		return;
 	waylogout_log(LOG_DEBUG, "Running %s action", action->label);
+	if (action->type == WL_ACTION_CANCEL)
+		return;
 	waylogout_log(LOG_DEBUG, "%s", action->command);
 	char *const cmd[] = { "sh", "-c", action->command, NULL, };
 	execvp(cmd[0], cmd);
@@ -2041,6 +2043,7 @@ int main(int argc, char **argv) {
 			ts.tv_nsec = 200000000;
 			nanosleep(&ts, NULL);
 			run_action(state.selected_action);
+			state.run_display = false;
 		}
 		loop_poll(state.eventloop);
 	}
