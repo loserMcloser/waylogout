@@ -1827,17 +1827,20 @@ int main(int argc, char **argv) {
 	}
 
 	struct waylogout_action *action;
-	if (!state.args.hide_cancel) {
-		bool cancel_found = false;
-		wl_list_for_each(action, &state.actions, link) {
-			if (action->type == WL_ACTION_CANCEL) {
-				cancel_found = true;
-				break;
-			}
+	bool cancel_found = false;
+	wl_list_for_each(action, &state.actions, link) {
+		if (action->type == WL_ACTION_CANCEL) {
+			cancel_found = true;
+			break;
 		}
-		if (!cancel_found)
-			add_action(&state, WL_ACTION_CANCEL, "cancel", "", NULL, XKB_KEY_c);
 	}
+	if (cancel_found && state.args.hide_cancel) {
+		waylogout_log(LOG_ERROR, "Label or symbol for cancel action configured, "
+				"but hide-cancel option also specified.");
+		return EXIT_FAILURE;
+	}
+	if (!cancel_found && !state.args.hide_cancel)
+		add_action(&state, WL_ACTION_CANCEL, "cancel", "", NULL, XKB_KEY_c);
 
 	int n_actions = wl_list_length(&state.actions);
 	int n_non_cancel_actions = n_actions - (!state.args.hide_cancel);
