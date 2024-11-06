@@ -4,6 +4,8 @@
 #
 
 _arguments -s \
+	'(--cancel-label)'--cancel-label'[Label to display in the indicator for the cancel action.]:label:' \
+	'(--cancel-symbol)'--cancel-symbol'[Symbol to display in the indicator for the cancel action..]:character:' \
 	'(--color -c)'{--color,-c}'[Turn the screen into the given color instead of white]:color:' \
 	'(--config -C)'{--config,-C}'[Path to the config file]:filename:_files' \
 	'(--debug -d)'{--debug,-d}'[Enable debugging output]' \
@@ -18,6 +20,8 @@ _arguments -s \
 	'(--font)'--font'[Sets the font of the text]:font:' \
 	'(--help -h)'{--help,-h}'[Show help message and quit]' \
 	'(--hibernate-command)'--hibernate-command'[Command to run when the hibernate action is activated]:command:' \
+	'(--hibernate-label)'--hibernate-label'[Label to display in the indicator for the hibernate action.]:label:' \
+	'(--hibernate-symbol)'--hibernate-symbol'[Symbol to display in the indicator for the hibernate action..]:character:' \
 	'(--hide-cancel)'--hide-cancel'[Hide the cancel action]' \
 	'(--image -i)'{--image,-i}'[Display the given image, optionally only on the given output]:filename:_files' \
 	'(--indicator-radius)'--indicator-radius'[Sets the indicator radius]:radius:' \
@@ -35,9 +39,20 @@ _arguments -s \
 	'(--line-uses-inside -n)'{--line-uses-inside,-n}'[Use the inside color for the line between the inside and ring]' \
 	'(--line-uses-ring -r)'{--line-uses-ring,-r}'[Use the ring color for the line between the inside and ring]' \
 	'(--lock-command)'--lock-command'[Command to run when the lock action is activated]:command:' \
+	'(--lock-label)'--lock-label'[Label to display in the indicator for the lock action.]:label:' \
+	'(--lock-symbol)'--lock-symbol'[Symbol to display in the indicator for the lock action..]:character:' \
 	'(--logout-command)'--logout-command'[Command to run when the logout action is activated]:command:' \
+	'(--logout-label)'--logout-label'[Label to display in the indicator for the logout action.]:label:' \
+	'(--logout-symbol)'--logout-symbol'[Symbol to display in the indicator for the logout action..]:character:' \
 	'(--poweroff-command)'--poweroff-command'[Command to run when the poweroff action is activated]:command:' \
+	'(--poweroff-label)'--poweroff-label'[Label to display in the indicator for the poweroff action.]:label:' \
+	'(--poweroff-symbol)'--poweroff-symbol'[Symbol to display in the indicator for the poweroff action..]:character:' \
 	'(--reboot-command)'--reboot-command'[Command to run when the reboot action is activated]:command:' \
+	'(--reboot-label)'--reboot-label'[Label to display in the indicator for the reboot action.]:label:' \
+	'(--reboot-symbol)'--reboot-symbol'[Symbol to display in the indicator for the reboot action..]:character:' \
+	'(--reload-command)'--reload-command'[Command to run when the reload action is activated]:command:' \
+	'(--reload-label)'--reload-label'[Label to display in the indicator for the reload action.]:label:' \
+	'(--reload-symbol)'--reload-symbol'[Symbol to display in the indicator for the reload action..]:character:' \
 	'(--ring-color)'--ring-color'[Sets the color of the ring of the indicator]:color:' \
 	'(--ring-selection-color)'--ring-selection-color'[Sets the color of the ring of the indicator in the selected action]:color:' \
 	'(--scaling -s)'{--scaling,-s}'[Image scaling mode: stretch, fill, fit, center, tile, solid_color]:mode:(stretch fill fit center tile solid_color)' \
@@ -45,7 +60,11 @@ _arguments -s \
 	'(--scroll-sensitivity)'--scroll-sensitivity'[How fast selected action will change when scrolling with mouse/touch]:amount:' \
 	'(--selection-label)'--selection-label'[Show action label for selected action]' \
 	'(--suspend-command)'--suspend-command'[Command to run when the suspend action is activated]:command:' \
+	'(--suspend-label)'--suspend-label'[Label to display in the indicator for the suspend action.]:label:' \
+	'(--suspend-symbol)'--suspend-symbol'[Symbol to display in the indicator for the suspend action..]:character:' \
 	'(--switch-user-command)'--switch-user-command'[Command to run when the switch-user action is activated]:command:' \
+	'(--switch-user-label)'--switch-user-label'[Label to display in the indicator for the switch user action.]:label:' \
+	'(--switch-user-symbol)'--switch-user-symbol'[Symbol to display in the indicator for the switch user action..]:character:' \
 	'(--symbol-font-size)'--symbol-font-size'[Sets a fixed font size for the action symbols]:size:' \
 	'(--text-color)'--text-color'[Sets the color of the text]:color:' \
 	'(--text-selection-color)'--text-selection-color'[Sets the color of the text for the selected action indicator]:color:' \

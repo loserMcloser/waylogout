@@ -40,35 +40,107 @@ Provides you with graphical set of options to logout/suspend/poweroff/etc in you
 	Instantly run actions on key press, without confirmation with enter key.
 
 *--poweroff-command* <command>
-	Command to run when the poweroff action is activated.
+	Command to run when the _poweroff_ action is activated.
 
 *--reboot-command* <command>
-	Command to run when the reboot action is activated.
+	Command to run when the _reboot_ action is activated.
 
 *--suspend-command* <command>
-	Command to run when the suspend action is activated
+	Command to run when the _suspend_ action is activated
 
 *--hibernate-command* <command>
-Command to run when the hibernate action is activated.
+Command to run when the _hibernate_ action is activated.
 
 *--logout-command* <command>
-	Command to run when the logout action is activated.
+	Command to run when the _logout_ action is activated.
 
 *--reload-command* <command>
-	Command to run when the reload session config action is activated.
+	Command to run when the _reload session config_ action is activated.
 
 *--lock-command* <command>
-	Command to run when the lock action is activated.
+	Command to run when the _lock_ action is activated.
 
 *--switch-user-command* <command>
-	Command to run when the switch-user action is activated.
+	Command to run when the _switch user_ action is activated.
 
 *--default-action* <action-name>
 	Action to pre-select on start-up. Must be one of _poweroff_, _reboot_, _suspend_, _hibernate_, _logout_, _reload_, _lock_, or _switch-user_.
 
 # APPEARANCE
 
-Action indicators will only appear for actions where a command has been specified, and will be displayed in the order their commands are specified.
+Action indicators will only appear for actions where a command has been specified, and will be displayed in the order they are configured (on the command line or in the config file).
+
+*--poweroff-label* <label>
+	Label to display in the _poweroff_ action indicator.
+	Default: "power off"
+
+*--poweroff-symbol* <character>
+	Symbol character to display in the _poweroff_ action indicator.
+	Default: 
+
+*--reboot-label* <label>
+	Label to display in the _reboot_ action indicator.
+	Default: "reboot"
+
+*--reboot-symbol* <character>
+	Symbol character to display in the _reboot_ action indicator.
+	Default: 
+
+*--suspend-label* <label>
+	Label to display in the _suspend_ action indicator.
+	Default: "sleep"
+
+*--suspend-symbol* <character>
+	Symbol character to display in the _suspend_ action indicator.
+	Default: 
+
+*--hibernate-label* <label>
+	Label to display in the _hibernate_ action indicator.
+	Default: "hibernate"
+
+*--hibernate-symbol* <character>
+	Symbol character to display in the _hibernate_ action indicator.
+	Default: 
+
+*--logout-label* <label>
+	Label to display in the _logout_ action indicator.
+	Default: "logout"
+
+*--logout-symbol* <character>
+	Symbol character to display in the _logout_ action indicator.
+	Default: 
+
+*--reload-label* <label>
+	Label to display in the _reload session config_ action indicator.
+	Default: "reload wm"
+
+*--reload-symbol* <character>
+	Symbol character to display in the _reload session config_ action indicator.
+	Default: 
+
+*--lock-label* <label>
+	Label to display in the _lock_ action indicator.
+	Default: "lock"
+
+*--lock-symbol* <character>
+	Symbol character to display in the _lock_ action indicator.
+	Default: 
+
+*--switch-user-label* <label>
+	Label to display in the _switch user_ action indicator.
+	Default: "switch user"
+
+*--switch-user-symbol* <character>
+	Symbol character to display in the _switch user_ action indicator.
+	Default: 
+
+*--cancel-label* <label>
+	Label to display in the _cancel_ action indicator.
+	Default: "switch user"
+
+*--cancel-symbol* <character>
+	Symbol character to display in the _cancel_ action indicator.
+	Default: 
 
 *--hide-cancel*
 	Hide the cancel action.
@@ -216,7 +288,7 @@ To activate the configured command for the selected action, press enter, or clic
 *s*
 	Select the suspend action (if configured).
 
-*w*
+*u*
 	Select the switch-user action (if configured).
 
 *x*

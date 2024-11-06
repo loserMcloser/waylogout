@@ -64,7 +64,8 @@ enum waylogout_action_type {
 	WL_ACTION_RELOAD,
 	WL_ACTION_LOCK,
 	WL_ACTION_SWITCH,
-	WL_ACTION_CANCEL
+	WL_ACTION_CANCEL,
+	WL_ACTION_END
 };
 
 struct waylogout_action {

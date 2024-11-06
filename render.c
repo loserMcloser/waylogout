@@ -309,10 +309,10 @@ void render_frames(struct waylogout_surface *surface) {
 	else
 		fr_common.selected_symbol_font_size = fr_common.symbol_font_size;
 
-	struct waylogout_action *action_iter;
+	struct waylogout_action *action;
 	fr_common.n_drawn = 0;
-	wl_list_for_each(action_iter, &state->actions, link) {
-		render_frame(action_iter, surface, fr_common);
+	wl_list_for_each(action, &state->actions, link) {
+		render_frame(action, surface, fr_common);
 		++fr_common.n_drawn;
 	}
 

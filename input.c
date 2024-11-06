@@ -169,7 +169,7 @@ void waylogout_handle_touch_motion(struct waylogout_state *state,
 void waylogout_handle_key(struct waylogout_state *state,
 		xkb_keysym_t keysym, uint32_t codepoint) {
 
-	struct waylogout_action *action_iter;
+	struct waylogout_action *action;
 
 	switch (keysym) {
 	case XKB_KEY_KP_Enter: /* fallthrough */
@@ -281,13 +281,13 @@ void waylogout_handle_key(struct waylogout_state *state,
 		struct wl_list *list_iter = &state->actions;
 		for (uint32_t count = 0; count < codepoint; ++count)
 			list_iter = list_iter->next;
-		state->selected_action = wl_container_of(list_iter, action_iter, link);
+		state->selected_action = wl_container_of(list_iter, action, link);
 		damage_state(state);
 		break;
 	default:
-		wl_list_for_each(action_iter, &state->actions, link)
-			if (action_iter->shortcut == keysym) {
-				state->selected_action = action_iter;
+		wl_list_for_each(action, &state->actions, link)
+			if (action->shortcut == keysym) {
+				state->selected_action = action;
 				if (state->args.instant_run)
 					state->selected_action_depressed = true;
 				damage_state(state);

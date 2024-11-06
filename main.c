@@ -25,6 +25,35 @@
 #include "wlr-layer-shell-unstable-v1-client-protocol.h"
 #include "wlr-screencopy-unstable-v1-client-protocol.h"
 
+static const char *default_labels[WL_ACTION_END] = {
+	'\0',
+	"power off",
+	"reboot",
+	"sleep",
+	"hibernate",
+	"logout",
+	"reload wm",
+	"lock",
+	"switch user",
+	"cancel"
+};
+
+// see main() for default_symbols array
+
+static const xkb_keysym_t default_shortcuts[WL_ACTION_END] = {
+	XKB_KEY_Escape,  // no action
+	XKB_KEY_p,       // power off
+	XKB_KEY_r,       // reboot
+	XKB_KEY_s,       // sleep
+	XKB_KEY_h,       // hibernate
+	XKB_KEY_x,       // logout
+	XKB_KEY_c,       // reload
+	XKB_KEY_k,       // lock
+	XKB_KEY_u,       // switch user
+	XKB_KEY_c        // cancel
+};
+
+
 // returns a positive integer in milliseconds
 static uint32_t parse_seconds(const char *seconds) {
 	char *endptr;
@@ -200,10 +229,10 @@ static void destroy_surface(struct waylogout_surface *surface) {
 	}
 	destroy_buffer(&surface->buffers[0]);
 	destroy_buffer(&surface->buffers[1]);
-	struct waylogout_action *action_iter;
-	wl_list_for_each(action_iter, &surface->state->actions, link) {
-		destroy_buffer(&action_iter->indicator_buffers[0]);
-		destroy_buffer(&action_iter->indicator_buffers[1]);
+	struct waylogout_action *action;
+	wl_list_for_each(action, &surface->state->actions, link) {
+		destroy_buffer(&action->indicator_buffers[0]);
+		destroy_buffer(&action->indicator_buffers[1]);
 	}
 	wl_output_destroy(surface->output);
 	free(surface);
@@ -237,11 +266,11 @@ static void create_surface(struct waylogout_surface *surface) {
 	assert(surface->surface);
 
 	wl_array_init(&surface->children);
-	struct waylogout_action *action_iter;
-	wl_list_for_each(action_iter, &state->actions, link) {
+	struct waylogout_action *action;
+	wl_list_for_each(action, &state->actions, link) {
 		struct waylogout_action_surface *new_child =
 			(struct waylogout_action_surface *) wl_array_add(&surface->children, sizeof(struct waylogout_action_surface));
-		new_child->action = action_iter;
+		new_child->action = action;
 		new_child->parent_surface = surface;
 		new_child->surface = wl_compositor_create_surface(state->compositor);
 		assert(new_child->surface);
@@ -729,19 +758,21 @@ static char *join_args(char **argv, int argc) {
 static char *strdup_noquotes(char *input) {
 	if (input == NULL)
 		return NULL;
-	char *revised_input = input;
-	char quote_char = 0;
-	if (*input == '"')
-		quote_char = '"';
-	else if (*input == '\'')
-		quote_char = '\'';
-	if (quote_char) {
-		++revised_input;
-		char *end = strchr(revised_input, quote_char);
-		if (end)
-			*end = '\0';
+	char *s = strdup(input);
+	char *s_copy = s;
+	size_t lastpos = strlen(s) - 1;
+	if (lastpos > 0) {
+		if (
+				(s[0] == '"'  && s[lastpos] == '"' )
+			||  (s[0] == '\'' && s[lastpos] == '\'')
+		) {
+			s[lastpos] = '\0';
+			++s;
+		}
 	}
-	return strdup(revised_input);
+	char *retptr = strdup(s);
+	free(s_copy);
+	return retptr;
 }
 
 static void load_image(char *arg, struct waylogout_state *state) {
@@ -835,28 +866,20 @@ static void add_action(struct waylogout_state *state,
 		enum waylogout_action_type type, char *label, char *symbol,
 		char *command, xkb_keysym_t shortcut) {
 
-	struct waylogout_action *action_iter;
-	wl_list_for_each(action_iter, &state->actions, link)
-		if (type == action_iter->type)
+	struct waylogout_action *action;
+	wl_list_for_each(action, &state->actions, link)
+		if (type == action->type)
 			return;
 
 	struct waylogout_action *new_action = malloc(sizeof(struct waylogout_action));
 
 	new_action->type = type;
-	new_action->label = strdup(label);
-	strncpy(new_action->symbol, symbol, 4);
-	if (command) {
-		char* cmd = command;
-		if (strlen(command) > 1)
-			if (
-			     (command[0] == '"' && command[strlen(command)-1] == '"')
-			  || (command[0] == '\'' && command[strlen(command)-1] == '\'')
-			) {
-				command[strlen(command)-1] = '\0';
-				cmd = &command[1];
-			}
-		new_action->command = strdup(cmd);
-	}
+	new_action->label = strdup_noquotes(label); // safe to pass NULL to strdup_noquotes
+	if (symbol)
+		strncpy(new_action->symbol, symbol, 4);
+	else
+		new_action->symbol[0] = '\0';
+	new_action->command = strdup_noquotes(command); // safe to pass NULL to strdup_noquotes
 	new_action->shortcut = shortcut;
 	new_action->rendered_depressed = false;
 
@@ -875,16 +898,42 @@ static void add_action(struct waylogout_state *state,
 	// insert new action at end of list
 	wl_list_insert(state->actions.prev, &new_action->link);
 
-	waylogout_log(LOG_DEBUG,
-	  "Action %s:  \n"
-	  "  symbol  %s\n"
-	  "  command %s"
-	  ,
-	  new_action->label,
-	  new_action->symbol,
-	  new_action->command
-	);
+}
 
+static void add_action_label(struct waylogout_state *state,
+		enum waylogout_action_type type, char *label) {
+	struct waylogout_action *action;
+	wl_list_for_each(action, &state->actions, link) {
+		if (type == action->type) {
+			action->label = strdup_noquotes(label);
+			return;
+		}
+	}
+	add_action(state, type, label, NULL, NULL, XKB_KEY_VoidSymbol);
+}
+
+static void add_action_symbol(struct waylogout_state *state,
+		enum waylogout_action_type type, char *symbol) {
+	struct waylogout_action *action;
+	wl_list_for_each(action, &state->actions, link) {
+		if (type == action->type) {
+			strncpy(action->symbol, symbol, 4);
+			return;
+		}
+	}
+	add_action(state, type, NULL, symbol, NULL, XKB_KEY_VoidSymbol);
+}
+
+static void add_action_command(struct waylogout_state *state,
+		enum waylogout_action_type type, char *command) {
+	struct waylogout_action *action;
+	wl_list_for_each(action, &state->actions, link) {
+		if (type == action->type) {
+			action->command = strdup_noquotes(command);
+			return;
+		}
+	}
+	add_action(state, type, NULL, NULL, command, XKB_KEY_VoidSymbol);
 }
 
 static void set_default_action(struct waylogout_state *state) {
@@ -914,12 +963,13 @@ static void set_default_action(struct waylogout_state *state) {
 	}
 
 	bool found_default = false;
-	struct waylogout_action *action_iter;
-	wl_list_for_each(action_iter, &state->actions, link)
-		if (default_type == action_iter->type) {
-			state->selected_action = action_iter;
+	struct waylogout_action *action;
+	wl_list_for_each(action, &state->actions, link) {
+		if (default_type == action->type) {
+			state->selected_action = action;
 			found_default = true;
 		}
+	}
 	if (found_default)
 		waylogout_log(LOG_INFO, "Set default action to %s", state->args.default_action);
 	else
@@ -978,6 +1028,24 @@ static int parse_options(int argc, char **argv, struct waylogout_state *state,
 		LO_COMMAND_RELOAD,
 		LO_COMMAND_LOCK,
 		LO_COMMAND_SWITCH,
+		LO_LABEL_POWEROFF,
+		LO_LABEL_REBOOT,
+		LO_LABEL_SUSPEND,
+		LO_LABEL_HIBERNATE,
+		LO_LABEL_LOGOUT,
+		LO_LABEL_RELOAD,
+		LO_LABEL_LOCK,
+		LO_LABEL_SWITCH,
+		LO_LABEL_CANCEL,
+		LO_SYMBOL_POWEROFF,
+		LO_SYMBOL_REBOOT,
+		LO_SYMBOL_SUSPEND,
+		LO_SYMBOL_HIBERNATE,
+		LO_SYMBOL_LOGOUT,
+		LO_SYMBOL_RELOAD,
+		LO_SYMBOL_LOCK,
+		LO_SYMBOL_SWITCH,
+		LO_SYMBOL_CANCEL,
 		LO_SCROLL_SENSITIVITY,
 		LO_INSTANT_RUN,
 	};
@@ -1031,6 +1099,24 @@ static int parse_options(int argc, char **argv, struct waylogout_state *state,
 		{"reload-command", required_argument, NULL, LO_COMMAND_RELOAD},
 		{"lock-command", required_argument, NULL, LO_COMMAND_LOCK},
 		{"switch-user-command", required_argument, NULL, LO_COMMAND_SWITCH},
+		{"poweroff-label", required_argument, NULL, LO_LABEL_POWEROFF},
+		{"reboot-label", required_argument, NULL, LO_LABEL_REBOOT},
+		{"suspend-label", required_argument, NULL, LO_LABEL_SUSPEND},
+		{"hibernate-label", required_argument, NULL, LO_LABEL_HIBERNATE},
+		{"logout-label", required_argument, NULL, LO_LABEL_LOGOUT},
+		{"reload-label", required_argument, NULL, LO_LABEL_RELOAD},
+		{"lock-label", required_argument, NULL, LO_LABEL_LOCK},
+		{"switch-user-label", required_argument, NULL, LO_LABEL_SWITCH},
+		{"cancel-label", required_argument, NULL, LO_LABEL_CANCEL},
+		{"poweroff-symbol", required_argument, NULL, LO_SYMBOL_POWEROFF},
+		{"reboot-symbol", required_argument, NULL, LO_SYMBOL_REBOOT},
+		{"suspend-symbol", required_argument, NULL, LO_SYMBOL_SUSPEND},
+		{"hibernate-symbol", required_argument, NULL, LO_SYMBOL_HIBERNATE},
+		{"logout-symbol", required_argument, NULL, LO_SYMBOL_LOGOUT},
+		{"reload-symbol", required_argument, NULL, LO_SYMBOL_RELOAD},
+		{"lock-symbol", required_argument, NULL, LO_SYMBOL_LOCK},
+		{"switch-user-symbol", required_argument, NULL, LO_SYMBOL_SWITCH},
+		{"cancel-symbol", required_argument, NULL, LO_SYMBOL_CANCEL},
 		{"default-action", required_argument, NULL, LO_DEFAULT_ACTION},
 		{"hide-cancel", no_argument, NULL, LO_HIDE_CANCEL},
 		{"reverse-arrows", no_argument, NULL, LO_REVERSE_ARROWS},
@@ -1123,19 +1209,57 @@ static int parse_options(int argc, char **argv, struct waylogout_state *state,
 			"Measure the time it takes to run each effect.\n"
 		"  --poweroff-command <command>     "
 		    "Command to run when \"poweroff\" action is activated.\n"
+		"  --poweroff-label <label>         "
+		    "Custom text label to display in the indicator for the \"poweroff\" action. Default is \"power off\".\n"
+		"  --poweroff-symbol <symbol>       "
+		    "Custom UTF-8 symbol character to display in the indicator for the \"poweroff\" action. Default is .\n"
 		"  --reboot-command <command>       "
 		    "Command to run when \"reboot\" action is activated.\n"
+		"  --reboot-label <label>           "
+		    "Custom text label to display in the indicator for the \"reboot\" action. Default is \"reboot\".\n"
+		"  --reboot-symbol <symbol>         "
+		    "Custom UTF-8 symbol character to display in the indicator for the \"reboot\" action. Default is .\n"
 		"  --suspend-command <command>      "
 		    "Command to run when \"suspend\" action is activated.\n"
+		"  --suspend-label <label>          "
+		    "Custom text label to display in the indicator for the \"suspend\" action. Default is \"suspend\".\n"
+		"  --suspend-symbol <symbol>        "
+		    "Custom UTF-8 symbol character to display in the indicator for the \"suspend\" action. Default is .\n"
 		"  --hibernate-command <command>    "
 		    "Command to run when \"hibernate\" action is activated.\n"
+		"  --hibernate-label <label>        "
+		    "Custom text label to display in the indicator for the \"hibernate\" action. Default is \"hibernate\".\n"
+		"  --hibernate-symbol <symbol>      "
+		    "Custom UTF-8 symbol character to display in the indicator for the \"hibernate\" action. Default is .\n"
 		"  --logout-command <command>       "
 		    "Command to run when \"logout\" action is activated.\n"
+		"  --logout-label <label>           "
+		    "Custom text label to display in the indicator for the \"logout\" action. Default is \"logout\".\n"
+		"  --logout-symbol <symbol>         "
+		    "Custom UTF-8 symbol character to display in the indicator for the \"logout\" action. Default is .\n"
+		"  --reload-command <command>       "
+		    "Command to run when \"reload wm config\" action is activated.\n"
+		"  --reload-label <label>           "
+		    "Custom text label to display in the indicator for the \"reload wm config\" action. Default is \"reload wm\".\n"
+		"  --reload-symbol <symbol>         "
+		    "Custom UTF-8 symbol character to display in the indicator for the \"reload wm\" action. Default is .\n"
 		"  --lock-command <command>         "
 		    "Command to run when \"lock\" action is activated.\n"
+		"  --lock-label <label>             "
+		    "Custom text label to display in the indicator for the \"lock\" action. Default is \"lock\".\n"
+		"  --lock-symbol <symbol>           "
+		    "Custom UTF-8 symbol character to display in the indicator for the \"lock\" action. Default is .\n"
 		"  --switch-user-command <command>  "
 		    "Command to run when \"switch user\" action is activated.\n"
-		"  --default-action <action-name>  "
+		"  --switch-user-label <label>      "
+		    "Custom text label to display in the indicator for the \"switch user\" action. Default is \"switch user\".\n"
+		"  --switch-user-symbol <symbol>    "
+		    "Custom UTF-8 symbol character to display in the indicator for the \"switch user\" action. Default is .\n"
+		"  --cancel-label <label>           "
+		    "Custom text label to display in the indicator for the \"cancel\" action. Default is \"cancel\".\n"
+		"  --cancel-symbol <symbol>    "
+		    "Custom UTF-8 symbol character to display in the indicator for the \"cancel\" action. Default is .\n"
+		"  --default-action <action-name>   "
 		    "Action to pre-select on start.\n"
 		"  --hide-cancel                    "
 			"Hide the indicator for the \"cancel\" option.\n"
@@ -1400,91 +1524,115 @@ static int parse_options(int argc, char **argv, struct waylogout_state *state,
 			break;
 		case LO_COMMAND_POWEROFF:
 			if (state)
-				add_action(
-				  state,
-				  WL_ACTION_POWEROFF,
-				  "power off",
-				  "",
-				  optarg,
-				  XKB_KEY_p
-				);
+				add_action_command(state, WL_ACTION_POWEROFF, optarg);
 			break;
+		case LO_LABEL_POWEROFF:
+			if (state)
+				add_action_label(state, WL_ACTION_POWEROFF, optarg);
+			break;
+		case LO_SYMBOL_POWEROFF:
+			if (state)
+				add_action_symbol(state, WL_ACTION_POWEROFF, optarg);
+			break;
+		// TODO LO_SHORTCUT_POWEROFF
 		case LO_COMMAND_REBOOT:
 			if (state)
-				add_action(
-				  state,
-				  WL_ACTION_REBOOT,
-				  "reboot",
-				  "",
-				  optarg,
-				  XKB_KEY_r
-				);
+				add_action_command(state, WL_ACTION_REBOOT, optarg);
 			break;
+		case LO_LABEL_REBOOT:
+			if (state)
+				add_action_label(state, WL_ACTION_REBOOT, optarg);
+			break;
+		case LO_SYMBOL_REBOOT:
+			if (state)
+				add_action_symbol(state, WL_ACTION_REBOOT, optarg);
+			break;
+		// TODO LO_SHORTCUT_REBOOT
 		case LO_COMMAND_SUSPEND:
 			if (state)
-				add_action(
-				  state,
-				  WL_ACTION_SUSPEND,
-				  "sleep",
-				  "",
-				  optarg,
-				  XKB_KEY_s
-				);
+				add_action_command(state, WL_ACTION_SUSPEND, optarg);
 			break;
+		case LO_LABEL_SUSPEND:
+			if (state)
+				add_action_label(state, WL_ACTION_SUSPEND, optarg);
+			break;
+		case LO_SYMBOL_SUSPEND:
+			if (state)
+				add_action_symbol(state, WL_ACTION_SUSPEND, optarg);
+			break;
+		// TODO LO_SHORTCUT_SUSPEND
 		case LO_COMMAND_HIBERNATE:
 			if (state)
-				add_action(
-				  state,
-				  WL_ACTION_HIBERNATE,
-				  "hibernate",
-				  "",
-				  optarg,
-				  XKB_KEY_h
-				);
+				add_action_command(state, WL_ACTION_HIBERNATE, optarg);
 			break;
+		case LO_LABEL_HIBERNATE:
+			if (state)
+				add_action_label(state, WL_ACTION_HIBERNATE, optarg);
+			break;
+		case LO_SYMBOL_HIBERNATE:
+			if (state)
+				add_action_symbol(state, WL_ACTION_HIBERNATE, optarg);
+			break;
+		// TODO LO_SHORTCUT_HIBERNATE
 		case LO_COMMAND_LOGOUT:
 			if (state)
-				add_action(
-				  state,
-				  WL_ACTION_LOGOUT,
-				  "logout",
-				  "",
-				  optarg,
-				  XKB_KEY_x
-				);
+				add_action_command(state, WL_ACTION_LOGOUT, optarg);
 			break;
+		case LO_LABEL_LOGOUT:
+			if (state)
+				add_action_label(state, WL_ACTION_LOGOUT, optarg);
+			break;
+		case LO_SYMBOL_LOGOUT:
+			if (state)
+				add_action_symbol(state, WL_ACTION_LOGOUT, optarg);
+			break;
+		// TODO LO_SHORTCUT_LOGOUT
 		case LO_COMMAND_RELOAD:
 			if (state)
-				add_action(
-				  state,
-				  WL_ACTION_RELOAD,
-				  "reload",
-				  "",
-				  optarg,
-				  XKB_KEY_c
-				);
+				add_action_command(state, WL_ACTION_RELOAD, optarg);
 			break;
+		case LO_LABEL_RELOAD:
+			if (state)
+				add_action_label(state, WL_ACTION_RELOAD, optarg);
+			break;
+		case LO_SYMBOL_RELOAD:
+			if (state)
+				add_action_symbol(state, WL_ACTION_RELOAD, optarg);
+			break;
+		// TODO LO_SHORTCUT_RELOAD
 		case LO_COMMAND_LOCK:
 			if (state)
-				add_action(
-				  state,
-				  WL_ACTION_LOCK,
-				  "lock",
-				  "",
-				  optarg,
-				  XKB_KEY_k
-				);
+				add_action_command(state, WL_ACTION_LOCK, optarg);
 			break;
+		case LO_LABEL_LOCK:
+			if (state)
+				add_action_label(state, WL_ACTION_LOCK, optarg);
+			break;
+		case LO_SYMBOL_LOCK:
+			if (state)
+				add_action_symbol(state, WL_ACTION_LOCK, optarg);
+			break;
+		// TODO LO_SHORTCUT_LOCK
 		case LO_COMMAND_SWITCH:
 			if (state)
-				add_action(
-				  state,
-				  WL_ACTION_SWITCH,
-				  "switch user",
-				  "",
-				  optarg,
-				  XKB_KEY_w
-				);
+				add_action_command(state, WL_ACTION_SWITCH, optarg);
+			break;
+		case LO_LABEL_SWITCH:
+			if (state)
+				add_action_label(state, WL_ACTION_SWITCH, optarg);
+			break;
+		case LO_SYMBOL_SWITCH:
+			if (state)
+				add_action_symbol(state, WL_ACTION_SWITCH, optarg);
+			break;
+		// TODO LO_SHORTCUT_SWITCH
+		case LO_LABEL_CANCEL:
+			if (state)
+				add_action_label(state, WL_ACTION_CANCEL, optarg);
+			break;
+		case LO_SYMBOL_CANCEL:
+			if (state)
+				add_action_symbol(state, WL_ACTION_CANCEL, optarg);
 			break;
 		case LO_HIDE_CANCEL:
 			if (state)
@@ -1638,12 +1786,6 @@ int main(int argc, char **argv) {
 		.effects = NULL,
 		.effects_count = 0,
 		.allow_fade = true,
-
-		// TODO add options for custom action text
-		// .text_cleared = strdup("Cleared"),
-		// .text_caps_lock = strdup("Caps Lock"),
-		// .text_verifying = strdup("Verifying"),
-		// .text_wrong = strdup("Wrong"),
 	};
 	wl_list_init(&state.images);
 	set_default_colors(&state.args.colors);
@@ -1684,8 +1826,18 @@ int main(int argc, char **argv) {
 		}
 	}
 
-	if (!state.args.hide_cancel)
-		add_action(&state, WL_ACTION_CANCEL, "cancel", "", NULL, XKB_KEY_c);
+	struct waylogout_action *action;
+	if (!state.args.hide_cancel) {
+		bool cancel_found = false;
+		wl_list_for_each(action, &state.actions, link) {
+			if (action->type == WL_ACTION_CANCEL) {
+				cancel_found = true;
+				break;
+			}
+		}
+		if (!cancel_found)
+			add_action(&state, WL_ACTION_CANCEL, "cancel", "", NULL, XKB_KEY_c);
+	}
 
 	int n_actions = wl_list_length(&state.actions);
 	int n_non_cancel_actions = n_actions - (!state.args.hide_cancel);
@@ -1693,6 +1845,51 @@ int main(int argc, char **argv) {
 		waylogout_log(LOG_ERROR, "No action commands configured --- "
 				"no point running if user's only option is to do nothing.");
 		return EXIT_FAILURE;
+	}
+
+	char default_symbols[WL_ACTION_END][8];
+	default_symbols[WL_ACTION_NO_ACTION][0] = '\0';
+	strncpy(default_symbols[WL_ACTION_POWEROFF], "", 4);
+	strncpy(default_symbols[WL_ACTION_REBOOT], "", 4);
+	strncpy(default_symbols[WL_ACTION_SUSPEND], "", 4);
+	strncpy(default_symbols[WL_ACTION_HIBERNATE], "", 4);
+	strncpy(default_symbols[WL_ACTION_LOGOUT], "", 4);
+	strncpy(default_symbols[WL_ACTION_RELOAD], "", 4);
+	strncpy(default_symbols[WL_ACTION_LOCK], "", 4);
+	strncpy(default_symbols[WL_ACTION_SWITCH], "", 4);
+	strncpy(default_symbols[WL_ACTION_CANCEL], "", 4);
+
+	wl_list_for_each(action, &state.actions, link) {
+		if (!action->command && action->type != WL_ACTION_CANCEL) {
+			if (action->label)
+				waylogout_log(LOG_ERROR,
+						"Label configured but no command configured for action \"%s\".",
+						default_labels[action->type]);
+			else if (action->symbol[0] != '\0')
+				waylogout_log(LOG_ERROR,
+						"Symbol configured but no command configured for action \"%s\".",
+						default_labels[action->type]);
+			else if (action->shortcut == XKB_KEY_VoidSymbol)
+				waylogout_log(LOG_ERROR,
+						"Keyboard shortcut configured but no command configured for action \"%s\".",
+						default_labels[action->type]);
+			return EXIT_FAILURE;
+		}
+		if (! action->label)
+			action->label = strdup(default_labels[action->type]);
+		if (action->symbol[0] == '\0')
+			strncpy(action->symbol, default_symbols[action->type], 4);
+		if (action->shortcut == XKB_KEY_VoidSymbol)
+			action->shortcut = default_shortcuts[action->type];
+		waylogout_log(LOG_DEBUG,
+		  "Action %s:  \n"
+		  "  symbol  %s\n"
+		  "  command %s"
+		  ,
+		  action->label,
+		  action->symbol,
+		  action->command
+		);
 	}
 
 	waylogout_log(LOG_DEBUG, "Found %d configured actions", n_actions);

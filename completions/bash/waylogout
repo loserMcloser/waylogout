@@ -21,6 +21,8 @@ _waylogout()
   )
 
   long=(
+    --cancel-label
+    --cancel-symbol
     --color
     --config
     --debug
@@ -34,6 +36,8 @@ _waylogout()
     --font
     --help
     --hibernate-command
+    --hibernate-label
+    --hibernate-symbol
     --hide-cancel
     --image
     --indicator-radius
@@ -51,9 +55,20 @@ _waylogout()
     --line-uses-inside
     --line-uses-ring
     --lock-command
+    --lock-label
+    --lock-symbol
     --logout-command
+    --logout-label
+    --logout-symbol
     --poweroff-command
+    --poweroff-label
+    --poweroff-symbol
     --reboot-command
+    --reboot-label
+    --reboot-symbol
+    --reload-command
+    --reload-label
+    --reload-symbol
     --ring-color
     --ring-selection-color
     --scaling
@@ -61,7 +76,11 @@ _waylogout()
     --scroll-sensitivity
     --selection-label
     --suspend-command
+    --suspend-label
+    --suspend-symbol
     --switch-user-command
+    --switch-user-label
+    --switch-user-symbol
     --symbol-font-size
     --text-color
     --text-selection-color
