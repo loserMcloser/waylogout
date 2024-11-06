@@ -39,6 +39,7 @@ struct waylogout_args {
 	uint32_t indicator_y_position;
 	uint32_t indicator_sep;
 	uint32_t scroll_sensitivity;
+	uint8_t rows;
 	bool instant_run;
 	bool override_indicator_x_position;
 	bool override_indicator_y_position;
@@ -73,6 +74,7 @@ struct waylogout_action {
 	char *label;
 	char symbol[8];
 	char *command;
+	uint8_t row;
 	xkb_keysym_t shortcut;
 	bool rendered_depressed;
 	struct pool_buffer indicator_buffers[2];
@@ -118,9 +120,12 @@ struct waylogout_state {
 	/* struct waylogout_hover hover; */
 	struct waylogout_action_surface *hovered_surface;
 	struct waylogout_touch touch;
-	wl_fixed_t scroll_amount;
 	struct waylogout_xkb xkb;
+	wl_fixed_t scroll_amount;
 	size_t n_screenshots_done;
+	int n_actions;
+	int rows[256];
+	int longest_row;
 	bool run_display;
 	bool selected_action_depressed;
 	bool run_action_now;
@@ -175,7 +180,8 @@ struct waylogout_frame_common {
 	uint32_t x_offset;
 	uint32_t x_center;
 	uint32_t y_center;
-	uint32_t n_drawn;
+	int32_t y_row_offset;
+	int n_drawn;  // per row
 	double symbol_font_size;
 	double selected_symbol_font_size;
 	double label_font_size;

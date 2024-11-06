@@ -50,6 +50,7 @@ complete -c waylogout -l reload-label                --description "Label to dis
 complete -c waylogout -l reload-symbol               --description "Symbol to display in the indicator for the reload session action."
 complete -c waylogout -l ring-color                  --description "Sets the color of the ring of the action indicators."
 complete -c waylogout -l ring-selection-color        --description "Sets the color of the ring of the selected action indicator."
+complete -c waylogout -l rows                   -s R --description "Number of rows of action indicators to display."
 complete -c waylogout -l scaling                -s s --description "Image scaling mode."
 complete -c waylogout -l screenshots            -s S --description "Display a screenshot."
 complete -c waylogout -l scroll-sensitivity          --description "How fast selected action will change when scrolling with mouse/touch."

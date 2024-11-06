@@ -110,14 +110,16 @@ void render_frame(struct waylogout_action *action,
 	int new_width = fr_common.indicator_diameter;
 	int new_height = fr_common.indicator_diameter;
 
-	double indicator_xcenter = fr_common.x_center - ((wl_list_length(&state->actions) - 1) / 2.0f - fr_common.n_drawn) * fr_common.x_offset;
+	double indicator_xcenter = fr_common.x_center -
+			((state->rows[action->row] - 1) / 2.0f - fr_common.n_drawn) * fr_common.x_offset;
 
 	double dbl_subsurf_xcenter = indicator_xcenter -
 			buffer_width / (2.0f * surface->scale) + 2 / (1.0f * surface->scale);
 	int subsurf_xcenter = dbl_subsurf_xcenter;
 
 	int subsurf_ycenter = fr_common.y_center -
-			(state->args.radius + state->args.thickness);
+			(state->args.radius + state->args.thickness) -
+			fr_common.y_row_offset;
 
 	bool will_render_depressed = false;
 	if (selected && state->selected_action_depressed) {
@@ -270,16 +272,21 @@ void render_frames(struct waylogout_surface *surface) {
 	fr_common.indicator_diameter = fr_common.arc_radius * 2
 			+ fr_common.arc_thickness + fr_common.line_width;
 
-	int n_actions = wl_list_length(&state->actions);
 	int indicator_sep = (state->args.indicator_sep > 0)
 	  ? (int) state->args.indicator_sep
-	  : (int) (surface->width * surface->scale - n_actions * fr_common.indicator_diameter)
-	    / (n_actions + 1)
+	  : (int) (surface->width * surface->scale - state->longest_row * fr_common.indicator_diameter)
+	    / (state->longest_row + 1)
 	;
 	if (indicator_sep < 0)
 		indicator_sep = fr_common.arc_thickness;
 
-	fr_common.x_offset = (fr_common.indicator_diameter + indicator_sep) / surface->scale;
+	uint32_t diameter_plus_sep = fr_common.indicator_diameter + indicator_sep;
+	fr_common.x_offset = diameter_plus_sep / surface->scale;
+	double y_row_offset_step = diameter_plus_sep / surface->scale;
+	double y_row_offset = y_row_offset_step * ((int) state->args.rows / 2);
+	if (state->args.rows % 2 == 0)
+		y_row_offset -= y_row_offset_step / 2.0f;
+	fr_common.y_row_offset = y_row_offset;
 
 	fr_common.x_center = (state->args.override_indicator_x_position)
 			? state->args.indicator_x_position
@@ -310,10 +317,16 @@ void render_frames(struct waylogout_surface *surface) {
 		fr_common.selected_symbol_font_size = fr_common.symbol_font_size;
 
 	struct waylogout_action *action;
-	fr_common.n_drawn = 0;
+	fr_common.n_drawn = 0;  // per row
+	uint8_t row_index = 0;
 	wl_list_for_each(action, &state->actions, link) {
 		render_frame(action, surface, fr_common);
 		++fr_common.n_drawn;
+		if (fr_common.n_drawn == state->rows[row_index]) {
+			fr_common.y_row_offset -= y_row_offset_step;
+			fr_common.n_drawn = 0;
+			++row_index;
+		}
 	}
 
 }

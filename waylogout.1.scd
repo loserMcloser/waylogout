@@ -153,6 +153,10 @@ Action indicators will only appear for actions where a command has been specifie
 *-l, --labels*
 	Always show action labels.
 
+*-R, --rows <number>*
+	Number of rows of action indicators to display.
+	Default: 1.
+
 *--selection-label*
 	Show action label for selected action,
 	even when --labels is not specified.

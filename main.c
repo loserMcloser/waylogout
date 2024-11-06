@@ -38,7 +38,8 @@ static const char *default_labels[WL_ACTION_END] = {
 	"cancel"
 };
 
-// see main() for default_symbols array
+// populated in main()
+char default_symbols[WL_ACTION_END][8];
 
 static const xkb_keysym_t default_shortcuts[WL_ACTION_END] = {
 	XKB_KEY_Escape,  // no action
@@ -985,6 +986,39 @@ void run_action(struct waylogout_action *action) {
 	execvp(cmd[0], cmd);
 }
 
+static void setup_rows(struct waylogout_state *state) {
+	if (state->args.rows > state->n_actions) {
+		waylogout_log(LOG_INFO, "Requested number of rows is greater than number of configured actions.");
+		state->args.rows = state->n_actions;
+	}
+	int per_row = state->n_actions / state->args.rows;
+	state->longest_row = per_row;
+	uint8_t leftover = state->n_actions % state->args.rows;
+	if (leftover > 0)
+		++state->longest_row;
+	uint8_t shorter = state->args.rows - leftover;
+	uint8_t row_tip = (shorter == 1) ? 0 : (shorter / 2 - 1);
+	uint8_t row_index;
+	for (row_index = 0; row_index < state->args.rows; ++row_index) {
+		state->rows[row_index] = per_row;
+		if ((row_index > row_tip) && (leftover > 0)) {
+			++state->rows[row_index];
+			--leftover;
+		}
+	}
+	row_index = 0;
+	int n_actions_this_row = 0;
+	struct waylogout_action *action;
+	wl_list_for_each(action, &state->actions, link) {
+		action->row = row_index;
+		++n_actions_this_row;
+		if (n_actions_this_row == state->rows[row_index]) {
+			++row_index;
+			n_actions_this_row = 0;
+		}
+	}
+}
+
 static int parse_options(int argc, char **argv, struct waylogout_state *state,
 		enum line_mode *line_mode, char **config_path) {
 	enum long_option_codes {
@@ -1060,6 +1094,7 @@ static int parse_options(int argc, char **argv, struct waylogout_state *state,
 		{"labels", no_argument, NULL, 'l'},
 		{"line-uses-inside", no_argument, NULL, 'n'},
 		{"line-uses-ring", no_argument, NULL, 'r'},
+		{"rows", required_argument, NULL, 'R'},
 		{"screenshots", no_argument, NULL, 'S'},
 		{"scaling", required_argument, NULL, 's'},
 		{"tiling", no_argument, NULL, 'T'},
@@ -1142,6 +1177,8 @@ static int parse_options(int argc, char **argv, struct waylogout_state *state,
 			"Display the given image, optionally only on the given output.\n"
 		"  -l, --labels                     "
 			"Show action labels.\n"
+		"  -R, --rows <number>              "
+			"Number of rows to use to display action indicators. Default: 1.\n"
 		"  -S, --screenshots                "
 			"Use screenshots as the background images.\n"
 		"  -s, --scaling <mode>             "
@@ -1277,7 +1314,7 @@ static int parse_options(int argc, char **argv, struct waylogout_state *state,
 	optind = 1;
 	while (1) {
 		int opt_idx = 0;
-		c = getopt_long(argc, argv, "c:dhi:Slnrs:tTvC:", long_options,
+		c = getopt_long(argc, argv, "c:dhi:Slnrs:tTvC:R:", long_options,
 				&opt_idx);
 		if (c == -1) {
 			break;
@@ -1322,6 +1359,11 @@ static int parse_options(int argc, char **argv, struct waylogout_state *state,
 		case 'r':
 			if (line_mode) {
 				*line_mode = LM_RING;
+			}
+			break;
+		case 'R':
+			if (state) {
+				state->args.rows = atoi(optarg);
 			}
 			break;
 		case 's':
@@ -1783,6 +1825,7 @@ int main(int argc, char **argv) {
 		.hide_cancel = false,
 		.reverse_arrows = false,
 		.screenshots = false,
+		.rows = 1,
 		.effects = NULL,
 		.effects_count = 0,
 		.allow_fade = true,
@@ -1842,15 +1885,13 @@ int main(int argc, char **argv) {
 	if (!cancel_found && !state.args.hide_cancel)
 		add_action(&state, WL_ACTION_CANCEL, "cancel", "", NULL, XKB_KEY_c);
 
-	int n_actions = wl_list_length(&state.actions);
-	int n_non_cancel_actions = n_actions - (!state.args.hide_cancel);
-	if (n_non_cancel_actions < 1) {
+	state.n_actions = wl_list_length(&state.actions);
+	if (state.n_actions - (!state.args.hide_cancel) < 1) {
 		waylogout_log(LOG_ERROR, "No action commands configured --- "
 				"no point running if user's only option is to do nothing.");
 		return EXIT_FAILURE;
 	}
 
-	char default_symbols[WL_ACTION_END][8];
 	default_symbols[WL_ACTION_NO_ACTION][0] = '\0';
 	strncpy(default_symbols[WL_ACTION_POWEROFF], "", 4);
 	strncpy(default_symbols[WL_ACTION_REBOOT], "", 4);
@@ -1895,8 +1936,9 @@ int main(int argc, char **argv) {
 		);
 	}
 
-	waylogout_log(LOG_DEBUG, "Found %d configured actions", n_actions);
+	waylogout_log(LOG_DEBUG, "Found %d configured actions", state.n_actions);
 
+	setup_rows(&state);
 	set_default_action(&state);
 
 	state.args.scroll_sensitivity = state.args.scroll_sensitivity * 1000;

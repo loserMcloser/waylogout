@@ -71,6 +71,7 @@ _waylogout()
     --reload-symbol
     --ring-color
     --ring-selection-color
+    --rows
     --scaling
     --screenshots
     --scroll-sensitivity
