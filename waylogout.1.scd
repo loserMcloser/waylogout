@@ -305,8 +305,13 @@ Here are the defaults.
 
 # SHORTCUT KEY OPTIONS
 
-*--reverse-arrows*
-	Reverse the direction of the up/down arrows.
+Keyboard shortcuts can be customized with the following options.
+
+Recognized modifiers are _Ctrl_ and _Alt_. To indicate a shifted key, just use the upper case version of the letter. For example, a keycombo option of "Ctrl+k" means typing the K key while holding down _Ctrl_, while "Ctrl+K" means tying the K key while holding down both _Ctrl_ and _Shift_.
+
+The two modifiers can be combined: for example, "Ctrl+Alt+k".
+
+For special keys you must use their keysym names --- see _xkbcommon-keysyms.h_ and use the last part of a defined macro name as the key name.
 
 *--poweroff-shortcut* <keycombo>
 	Keyboard shortcut key (with optional modifiers) to select the _poweroff_ action.
@@ -334,6 +339,9 @@ Here are the defaults.
 
 *--cancel-shortcut* <keycombo>
 	Keyboard shortcut key (with optional modifiers) to select the _cancel_ action.
+
+*--reverse-arrows*
+	Reverse the direction of the up/down arrows.
 
 
 # AUTHORS
