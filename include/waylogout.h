@@ -6,11 +6,16 @@
 #include <wayland-cursor.h>
 #include "background-image.h"
 #include "cairo.h"
+#include "input.h"
 #include "pool-buffer.h"
 #include "seat.h"
 #include "effects.h"
 #include "fade.h"
 #include "wlr-layer-shell-unstable-v1-client-protocol.h"
+
+struct waylogout_action;
+enum waylogout_action_type;
+struct waylogout_action_surface;
 
 struct waylogout_colorset {
 	uint32_t normal;
@@ -53,40 +58,6 @@ struct waylogout_args {
 	bool time_effects;
 	uint32_t fade_in;
 	bool allow_fade;
-};
-
-enum waylogout_action_type {
-	WL_ACTION_NO_ACTION,
-	WL_ACTION_POWEROFF,
-	WL_ACTION_REBOOT,
-	WL_ACTION_SUSPEND,
-	WL_ACTION_HIBERNATE,
-	WL_ACTION_LOGOUT,
-	WL_ACTION_RELOAD,
-	WL_ACTION_LOCK,
-	WL_ACTION_SWITCH,
-	WL_ACTION_CANCEL,
-	WL_ACTION_END
-};
-
-struct waylogout_action {
-	enum waylogout_action_type type;
-	char *label;
-	char symbol[8];
-	char *command;
-	uint8_t row;
-	xkb_keysym_t shortcut;
-	bool rendered_depressed;
-	struct pool_buffer indicator_buffers[2];
-	struct wl_list link;
-};
-
-struct waylogout_action_surface {
-	struct waylogout_action *action;
-	struct wl_surface *surface; // surface made into subsurface
-	struct wl_subsurface *subsurface;
-	struct waylogout_surface *parent_surface;
-	uint32_t indicator_width, indicator_height;
 };
 
 struct waylogout_touch {

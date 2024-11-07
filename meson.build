@@ -103,8 +103,10 @@ dependencies = [
 ]
 
 sources = [
+	'action.c',
 	'background-image.c',
 	'cairo.c',
+	'helpers.c',
 	'input.c',
 	'log.c',
 	'loop.c',

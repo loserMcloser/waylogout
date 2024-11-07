@@ -3,6 +3,7 @@
 #include <time.h>
 #include <locale.h>
 #include <wayland-client.h>
+#include "action.h"
 #include "cairo.h"
 #include "background-image.h"
 #include "waylogout.h"

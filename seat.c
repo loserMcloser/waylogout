@@ -81,6 +81,11 @@ static void keyboard_key(void *data, struct wl_keyboard *wl_keyboard,
 	}
 }
 
+static bool mod_is_active(struct xkb_state *state, const char *name) {
+	return xkb_state_mod_name_is_active(state, name,
+		XKB_STATE_MODS_DEPRESSED | XKB_STATE_MODS_LATCHED);
+}
+
 static void keyboard_modifiers(void *data, struct wl_keyboard *wl_keyboard,
 		uint32_t serial, uint32_t mods_depressed, uint32_t mods_latched,
 		uint32_t mods_locked, uint32_t group) {
@@ -91,9 +96,8 @@ static void keyboard_modifiers(void *data, struct wl_keyboard *wl_keyboard,
 	}
 	xkb_state_update_mask(state->xkb.state,
 		mods_depressed, mods_latched, mods_locked, 0, 0, group);
-	// state->xkb.control = xkb_state_mod_name_is_active(state->xkb.state,
-	// 	XKB_MOD_NAME_CTRL,
-	// 	XKB_STATE_MODS_DEPRESSED | XKB_STATE_MODS_LATCHED);
+	state->xkb.control = mod_is_active(state->xkb.state, XKB_MOD_NAME_CTRL);
+	state->xkb.alt = mod_is_active(state->xkb.state, XKB_MOD_NAME_ALT);
 }
 
 static void keyboard_repeat_info(void *data, struct wl_keyboard *wl_keyboard,

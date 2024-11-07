@@ -1,45 +1,64 @@
+#define _POSIX_C_SOURCE 200809L
 #include <xkbcommon/xkbcommon.h>
 #include <linux/input-event-codes.h>
+#include <string.h>
+#include "action.h"
+#include "helpers.h"
+#include "input.h"
+#include "log.h"
 #include "loop.h"
 #include "seat.h"
 #include "waylogout.h"
 
-void select_first_action(struct waylogout_state *state) {
-	state->selected_action =
-			wl_container_of(state->actions.next, state->selected_action, link);
-	damage_state(state);
+bool compare_shortcuts(struct waylogout_keycombo *combo1, struct waylogout_keycombo *combo2) {
+	if (combo1->key == XKB_KEY_NoSymbol)
+		return false;
+	return (combo1->key == combo2->key) &&
+			(combo1->control == combo2->control) &&
+			(combo1->alt == combo2->alt);
 }
 
-void select_last_action(struct waylogout_state *state) {
-	state->selected_action =
-			wl_container_of(state->actions.prev, state->selected_action, link);
-	damage_state(state);
-}
-
-void select_next_action(struct waylogout_state *state) {
-	struct wl_list *selection;
-	if (state->selected_action) {
-		selection = state->selected_action->link.next;
-		if (selection == &state->actions)
-			selection = state->actions.next;
-	} else
-		selection = state->actions.next;
-	state->selected_action =
-			wl_container_of(selection, state->selected_action, link);
-	damage_state(state);
-}
-
-void select_prev_action(struct waylogout_state *state) {
-	struct wl_list *selection;
-	if (state->selected_action) {
-		selection = state->selected_action->link.prev;
-		if (selection == &state->actions)
-			selection = state->actions.prev;
-	} else
-		selection = state->actions.prev;
-	state->selected_action =
-			wl_container_of(selection, state->selected_action, link);
-	damage_state(state);
+void parse_shortcut(char *keycombo, struct waylogout_keycombo *shortcut) {
+	*shortcut = (struct waylogout_keycombo) {
+		.key = XKB_KEY_NoSymbol,
+		.control = false,
+		.alt = false,
+		.deleted = false
+	};
+	if (!keycombo)
+		return;
+	char *separator;
+	char *chunk;
+	char *keycombo_orig = strdup_noquotes(keycombo);
+	char *keycombo_working = strdup_noquotes(keycombo);
+	char *keycombo_working_orig = keycombo_working;
+	while ((separator = strchr(keycombo_working, '+'))) {
+		*separator = '\0';
+		chunk = strdup(keycombo_working);
+		if (strncmp(chunk, "Ctrl", 4) == 0)
+			shortcut->control = true;
+		else if (strncmp(chunk, "Alt", 3) == 0)
+			shortcut->alt = true;
+		else {
+			waylogout_log(LOG_ERROR,
+					"Could not parse shortcut config string \"%s\" --- unknown modifier \"%s\"",
+					keycombo_orig, chunk);
+			free(keycombo_orig);
+			free(keycombo_working_orig);
+			free(chunk);
+			return;
+		}
+		keycombo_working = separator + 1;
+		free(chunk);
+	}
+	shortcut->key = xkb_keysym_from_name(keycombo_working, 0);
+	if (shortcut->key == XKB_KEY_NoSymbol) {
+		waylogout_log(LOG_ERROR,
+				"Could not parse shortcut config string \"%s\" --- unknown key \"%s\"",
+				keycombo_orig, keycombo_working);
+	}
+	free(keycombo_orig);
+	free(keycombo_working_orig);
 }
 
 void mouse_enter_motion_selection(struct waylogout_state *state, int x, int y) {
@@ -171,128 +190,154 @@ void waylogout_handle_key(struct waylogout_state *state,
 
 	struct waylogout_action *action;
 
-	switch (keysym) {
-	case XKB_KEY_KP_Enter: /* fallthrough */
-	case XKB_KEY_Return:
-		if (state->selected_action) {
-			state->selected_action_depressed = true;
-			damage_state(state);
-			state->run_action_now = true;
-		}
-		break;
-	case XKB_KEY_Escape:
-		state->run_display = false;
-		break;
-	case XKB_KEY_Down: /* fallthrough */
-	case XKB_KEY_KP_Down:
-		if (state->args.reverse_arrows)
-			select_next_action(state);
-		else
-			select_prev_action(state);
-		break;
-	case XKB_KEY_Left: /* fallthrough */
-	case XKB_KEY_KP_Left: /* fallthrough */
-	case XKB_KEY_ISO_Left_Tab:
-		select_prev_action(state);
-		break;
-	case XKB_KEY_Up: /* fallthrough */
-	case XKB_KEY_KP_Up:
-		if (state->args.reverse_arrows)
-			select_prev_action(state);
-		else
-			select_next_action(state);
-		break;
-	case XKB_KEY_Right: /* fallthrough */
-	case XKB_KEY_KP_Right: /* fallthrough */
-	case XKB_KEY_Tab:
-		select_next_action(state);
-		break;
-	case XKB_KEY_Home: /* fallthrough */
-	case XKB_KEY_KP_Home:
-		select_first_action(state);
-		break;
-	case XKB_KEY_End: /* fallthrough */
-	case XKB_KEY_KP_End:
-		select_last_action(state);
-		break;
-	case XKB_KEY_F1:
-		codepoint = 1;
-		 /* fallthrough */
-	case XKB_KEY_F2:
-		if (codepoint == 0)
-			codepoint = 2;
-		 /* fallthrough */
-	case XKB_KEY_F3:
-		if (codepoint == 0)
-			codepoint = 3;
-		 /* fallthrough */
-	case XKB_KEY_F4:
-		if (codepoint == 0)
-			codepoint = 4;
-		 /* fallthrough */
-	case XKB_KEY_F5:
-		if (codepoint == 0)
-			codepoint = 5;
-		 /* fallthrough */
-	case XKB_KEY_F6:
-		if (codepoint == 0)
-			codepoint = 6;
-		 /* fallthrough */
-	case XKB_KEY_F7:
-		if (codepoint == 0)
-			codepoint = 7;
-		 /* fallthrough */
-	case XKB_KEY_F8:
-		if (codepoint == 0)
-			codepoint = 8;
-		 /* fallthrough */
-	case XKB_KEY_F9:
-		if (codepoint == 0)
-			codepoint = 9;
-		 /* fallthrough */
-	case XKB_KEY_F10:
-		if (codepoint == 0)
-			codepoint = 10;
-		 /* fallthrough */
-	case XKB_KEY_F11:
-		if (codepoint == 0)
-			codepoint = 11;
-		 /* fallthrough */
-	case XKB_KEY_F12:
-		if (codepoint == 0)
-			codepoint = 12;
-		 /* fallthrough */
-	case XKB_KEY_0:
-	case XKB_KEY_1:
-	case XKB_KEY_2:
-	case XKB_KEY_3:
-	case XKB_KEY_4:
-	case XKB_KEY_5:
-	case XKB_KEY_6:
-	case XKB_KEY_7:
-	case XKB_KEY_8:
-	case XKB_KEY_9:
-		if (codepoint == 48)
-			codepoint = 58;
-		if (codepoint > 12)
-			codepoint -= 48;
-		codepoint = codepoint % wl_list_length(&state->actions);
-		codepoint = (codepoint == 0) ? (uint32_t) wl_list_length(&state->actions) : codepoint;
-		struct wl_list *list_iter = &state->actions;
-		for (uint32_t count = 0; count < codepoint; ++count)
-			list_iter = list_iter->next;
-		state->selected_action = wl_container_of(list_iter, action, link);
-		damage_state(state);
-		break;
-	default:
-		wl_list_for_each(action, &state->actions, link)
-			if (action->shortcut == keysym) {
-				state->selected_action = action;
-				if (state->args.instant_run)
-					state->selected_action_depressed = true;
+	if (! (state->xkb.control || state->xkb.alt)) {
+
+		switch (keysym) {
+		case XKB_KEY_KP_Enter: /* fallthrough */
+		case XKB_KEY_Return:
+			if (state->selected_action) {
+				state->selected_action_depressed = true;
 				damage_state(state);
-				state->run_action_now = state->args.instant_run;
-				break;
+				state->run_action_now = true;
 			}
+			return;
+		case XKB_KEY_Escape:
+			if (state->args.hide_cancel)
+				state->run_display = false;
+			else {
+				state->selected_action = find_action(&state->actions, WL_ACTION_CANCEL);
+				state->selected_action_depressed = true;
+				damage_state(state);
+				state->run_action_now = true;
+			}
+			return;
+		case XKB_KEY_Down: /* fallthrough */
+		case XKB_KEY_KP_Down:
+			if (state->args.reverse_arrows)
+				select_next_action(state);
+			else
+				select_prev_action(state);
+			return;
+		case XKB_KEY_Left: /* fallthrough */
+		case XKB_KEY_KP_Left: /* fallthrough */
+		case XKB_KEY_ISO_Left_Tab:
+			select_prev_action(state);
+			return;
+		case XKB_KEY_Up: /* fallthrough */
+		case XKB_KEY_KP_Up:
+			if (state->args.reverse_arrows)
+				select_prev_action(state);
+			else
+				select_next_action(state);
+			return;
+		case XKB_KEY_Right: /* fallthrough */
+		case XKB_KEY_KP_Right: /* fallthrough */
+		case XKB_KEY_Tab:
+			select_next_action(state);
+			return;
+		case XKB_KEY_Home: /* fallthrough */
+		case XKB_KEY_KP_Home:
+			select_first_action(state);
+			return;
+		case XKB_KEY_End: /* fallthrough */
+		case XKB_KEY_KP_End:
+			select_last_action(state);
+			return;
+		case XKB_KEY_F1:
+			codepoint = 1;
+			/* fallthrough */
+		case XKB_KEY_F2:
+			if (codepoint == 0)
+				codepoint = 2;
+			/* fallthrough */
+		case XKB_KEY_F3:
+			if (codepoint == 0)
+				codepoint = 3;
+			/* fallthrough */
+		case XKB_KEY_F4:
+			if (codepoint == 0)
+				codepoint = 4;
+			/* fallthrough */
+		case XKB_KEY_F5:
+			if (codepoint == 0)
+				codepoint = 5;
+			/* fallthrough */
+		case XKB_KEY_F6:
+			if (codepoint == 0)
+				codepoint = 6;
+			/* fallthrough */
+		case XKB_KEY_F7:
+			if (codepoint == 0)
+				codepoint = 7;
+			/* fallthrough */
+		case XKB_KEY_F8:
+			if (codepoint == 0)
+				codepoint = 8;
+			/* fallthrough */
+		case XKB_KEY_F9:
+			if (codepoint == 0)
+				codepoint = 9;
+			/* fallthrough */
+		case XKB_KEY_F10:
+			if (codepoint == 0)
+				codepoint = 10;
+			/* fallthrough */
+		case XKB_KEY_F11:
+			if (codepoint == 0)
+				codepoint = 11;
+			/* fallthrough */
+		case XKB_KEY_F12:
+			if (codepoint == 0)
+				codepoint = 12;
+			/* fallthrough */
+		case XKB_KEY_0:
+		case XKB_KEY_1:
+		case XKB_KEY_2:
+		case XKB_KEY_3:
+		case XKB_KEY_4:
+		case XKB_KEY_5:
+		case XKB_KEY_6:
+		case XKB_KEY_7:
+		case XKB_KEY_8:
+		case XKB_KEY_9:
+			if (codepoint == 48)
+				codepoint = 58;
+			if (codepoint > 12)
+				codepoint -= 48;
+			codepoint = codepoint % wl_list_length(&state->actions);
+			codepoint = (codepoint == 0) ? (uint32_t) wl_list_length(&state->actions) : codepoint;
+			struct wl_list *list_iter = &state->actions;
+			for (uint32_t count = 0; count < codepoint; ++count)
+				list_iter = list_iter->next;
+			state->selected_action = wl_container_of(list_iter, action, link);
+			damage_state(state);
+			return;
+		default:
+			break;
+		}
+
 	}
+
+	// if we reach here, keypress has not been handled
+	char keyname[64];
+	xkb_keysym_get_name(keysym, keyname, 64);
+	waylogout_log(LOG_DEBUG, "Keypress: %s  Ctrl: %d  Alt: %d", keyname,
+			state->xkb.control, state->xkb.alt);
+	struct waylogout_keycombo keycombo = (struct waylogout_keycombo) {
+		.control = state->xkb.control,
+		.alt = state->xkb.alt,
+		.deleted = false,
+		.key = keysym
+	};
+	wl_list_for_each(action, &state->actions, link) {
+		if (compare_shortcuts(&action->shortcut, &keycombo)) {
+			state->selected_action = action;
+			if (state->args.instant_run)
+				state->selected_action_depressed = true;
+			damage_state(state);
+			state->run_action_now = state->args.instant_run;
+			break;
+		}
+	}
+
 }

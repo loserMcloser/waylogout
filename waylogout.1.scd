@@ -271,7 +271,11 @@ To activate the configured command for the selected action, press enter, or clic
 
 # SHORTCUT KEYS
 
-*Esc*
+Shortcut keys can be customized --- see _SHORTCUT KEY OPTIONS_ below.
+
+Here are the defaults.
+
+*Escape*
 	Exit without running any action command.
 
 *c*
@@ -303,6 +307,33 @@ To activate the configured command for the selected action, press enter, or clic
 
 *--reverse-arrows*
 	Reverse the direction of the up/down arrows.
+
+*--poweroff-shortcut* <keycombo>
+	Keyboard shortcut key (with optional modifiers) to select the _poweroff_ action.
+
+*--reboot-shortcut* <keycombo>
+	Keyboard shortcut key (with optional modifiers) to select the _reboot_ action.
+
+*--suspend-shortcut* <keycombo>
+	Keyboard shortcut key (with optional modifiers) to select the _suspend_ action.
+
+*--hibernate-shortcut* <keycombo>
+	Keyboard shortcut key (with optional modifiers) to select the _hibernate_ action.
+
+*--logout-shortcut* <keycombo>
+	Keyboard shortcut key (with optional modifiers) to select the _logout_ action.
+
+*--reload-shortcut* <keycombo>
+	Keyboard shortcut key (with optional modifiers) to select the _reload_ action.
+
+*--lock-shortcut* <keycombo>
+	Keyboard shortcut key (with optional modifiers) to select the _lock_ action.
+
+*--switch-user-shortcut* <keycombo>
+	Keyboard shortcut key (with optional modifiers) to select the _switch user_ action.
+
+*--cancel-shortcut* <keycombo>
+	Keyboard shortcut key (with optional modifiers) to select the _cancel_ action.
 
 
 # AUTHORS
