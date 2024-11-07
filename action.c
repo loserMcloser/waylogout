@@ -54,7 +54,7 @@ void add_action(struct waylogout_state *state,
 		return;
 	}
 
-	if (find_action(&state->actions, type))
+	if ((type != WL_ACTION_CUSTOM) && find_action(&state->actions, type))
 		return;
 
 	struct waylogout_action *new_action = malloc(sizeof(struct waylogout_action));
@@ -98,41 +98,45 @@ void add_action(struct waylogout_state *state,
 void add_action_label(struct waylogout_state *state,
 		enum waylogout_action_type type, char *label) {
 	struct waylogout_action *action = find_action(&state->actions, type);
-	if (action) {
+	if (action && (!action->label)) {
 		action->label = strdup_noquotes(label);
 		return;
 	}
-	add_action(state, type, label, NULL, NULL, NULL, XKB_KEY_NoSymbol);
+	if ((!action) || (type == WL_ACTION_CUSTOM))
+		add_action(state, type, label, NULL, NULL, NULL, XKB_KEY_NoSymbol);
 }
 
 void add_action_shortcut(struct waylogout_state *state,
 		enum waylogout_action_type type, char *keycombo) {
 	struct waylogout_action *action = find_action(&state->actions, type);
-	if (action) {
+	if (action && (action->shortcut.key == XKB_KEY_NoSymbol)) {
 		parse_shortcut(keycombo, &action->shortcut);
 		return;
 	}
-	add_action(state, type, NULL, NULL, NULL, keycombo, XKB_KEY_NoSymbol);
+	if ((!action) || (type == WL_ACTION_CUSTOM))
+		add_action(state, type, NULL, NULL, NULL, keycombo, XKB_KEY_NoSymbol);
 }
 
 void add_action_symbol(struct waylogout_state *state,
 		enum waylogout_action_type type, char *symbol) {
 	struct waylogout_action *action = find_action(&state->actions, type);
-	if (action) {
+	if (action && (action->symbol[0] == '\0')) {
 		strncpy(action->symbol, symbol, 4);
 		return;
 	}
-	add_action(state, type, NULL, symbol, NULL, NULL, XKB_KEY_NoSymbol);
+	if ((!action) || (type == WL_ACTION_CUSTOM))
+		add_action(state, type, NULL, symbol, NULL, NULL, XKB_KEY_NoSymbol);
 }
 
 void add_action_command(struct waylogout_state *state,
 		enum waylogout_action_type type, char *command) {
 	struct waylogout_action *action = find_action(&state->actions, type);
-	if (action) {
+	if (action && (!action->command)) {
 		action->command = strdup_noquotes(command);
 		return;
 	}
-	add_action(state, type, NULL, NULL, command, NULL, XKB_KEY_NoSymbol);
+	if ((!action) || (type == WL_ACTION_CUSTOM))
+		add_action(state, type, NULL, NULL, command, NULL, XKB_KEY_NoSymbol);
 }
 
 void set_default_action(struct waylogout_state *state) {
@@ -217,12 +221,19 @@ void setup_rows(struct waylogout_state *state) {
 	}
 }
 
-struct waylogout_action *find_action(struct wl_list *actions, enum waylogout_action_type type){
+struct waylogout_action *find_action(struct wl_list *actions,
+		enum waylogout_action_type type){
+	// in the case of WL_ACTION_CUSTOM, finds last occurrence
 	struct waylogout_action *action;
-	wl_list_for_each(action, actions, link)
-		if (action->type == type)
-			return action;
-	return NULL;
+	struct waylogout_action *ret_action = NULL;
+	wl_list_for_each(action, actions, link) {
+		if (action->type == type) {
+			ret_action = action;
+			if (type != WL_ACTION_CUSTOM)
+				break;
+		}
+	}
+	return ret_action;
 }
 
 int finish_actions_setup(struct waylogout_state *state) {
@@ -246,7 +257,8 @@ int finish_actions_setup(struct waylogout_state *state) {
 		"reload wm",
 		"lock",
 		"switch user",
-		"cancel"
+		"cancel",
+		"custom"
 	};
 
 	char default_symbols[WL_ACTION_END][8];
@@ -260,6 +272,7 @@ int finish_actions_setup(struct waylogout_state *state) {
 	strncpy(default_symbols[WL_ACTION_LOCK], "", 4);
 	strncpy(default_symbols[WL_ACTION_SWITCH], "", 4);
 	strncpy(default_symbols[WL_ACTION_CANCEL], "", 4);
+	strcpy(default_symbols[WL_ACTION_CUSTOM], "?");
 
 	const xkb_keysym_t default_shortcut_keys[WL_ACTION_END] = {
 		XKB_KEY_NoSymbol,  // no action
@@ -271,7 +284,8 @@ int finish_actions_setup(struct waylogout_state *state) {
 		XKB_KEY_c,         // reload
 		XKB_KEY_k,         // lock
 		XKB_KEY_u,         // switch user
-		XKB_KEY_Escape     // cancel
+		XKB_KEY_Escape,    // cancel
+		XKB_KEY_NoSymbol   // custom
 	};
 
 #define N_RESERVED_KEYS 39

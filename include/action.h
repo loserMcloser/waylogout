@@ -16,6 +16,7 @@ enum waylogout_action_type {
 	WL_ACTION_LOCK,
 	WL_ACTION_SWITCH,
 	WL_ACTION_CANCEL,
+	WL_ACTION_CUSTOM,
 	WL_ACTION_END
 };
 
@@ -61,7 +62,8 @@ void set_default_action(struct waylogout_state *state);
 void run_action(struct waylogout_state *state, struct waylogout_action *action);
 void setup_rows(struct waylogout_state *state);
 
-struct waylogout_action *find_action(struct wl_list *actions, enum waylogout_action_type type);
+struct waylogout_action *find_action(struct wl_list *actions,
+		enum waylogout_action_type type);
 
 int finish_actions_setup(struct waylogout_state *state);
 

@@ -847,6 +847,7 @@ static int parse_options(int argc, char **argv, struct waylogout_state *state,
 		LO_COMMAND_RELOAD,
 		LO_COMMAND_LOCK,
 		LO_COMMAND_SWITCH,
+		LO_COMMAND_CUSTOM,
 		LO_LABEL_POWEROFF,
 		LO_LABEL_REBOOT,
 		LO_LABEL_SUSPEND,
@@ -856,6 +857,7 @@ static int parse_options(int argc, char **argv, struct waylogout_state *state,
 		LO_LABEL_LOCK,
 		LO_LABEL_SWITCH,
 		LO_LABEL_CANCEL,
+		LO_LABEL_CUSTOM,
 		LO_SYMBOL_POWEROFF,
 		LO_SYMBOL_REBOOT,
 		LO_SYMBOL_SUSPEND,
@@ -865,6 +867,7 @@ static int parse_options(int argc, char **argv, struct waylogout_state *state,
 		LO_SYMBOL_LOCK,
 		LO_SYMBOL_SWITCH,
 		LO_SYMBOL_CANCEL,
+		LO_SYMBOL_CUSTOM,
 		LO_SHORTCUT_POWEROFF,
 		LO_SHORTCUT_REBOOT,
 		LO_SHORTCUT_SUSPEND,
@@ -874,6 +877,7 @@ static int parse_options(int argc, char **argv, struct waylogout_state *state,
 		LO_SHORTCUT_LOCK,
 		LO_SHORTCUT_SWITCH,
 		LO_SHORTCUT_CANCEL,
+		LO_SHORTCUT_CUSTOM,
 		LO_SCROLL_SENSITIVITY,
 		LO_INSTANT_RUN,
 	};
@@ -928,6 +932,7 @@ static int parse_options(int argc, char **argv, struct waylogout_state *state,
 		{"reload-command", required_argument, NULL, LO_COMMAND_RELOAD},
 		{"lock-command", required_argument, NULL, LO_COMMAND_LOCK},
 		{"switch-user-command", required_argument, NULL, LO_COMMAND_SWITCH},
+		{"custom-command", required_argument, NULL, LO_COMMAND_CUSTOM},
 		{"poweroff-label", required_argument, NULL, LO_LABEL_POWEROFF},
 		{"reboot-label", required_argument, NULL, LO_LABEL_REBOOT},
 		{"suspend-label", required_argument, NULL, LO_LABEL_SUSPEND},
@@ -937,6 +942,7 @@ static int parse_options(int argc, char **argv, struct waylogout_state *state,
 		{"lock-label", required_argument, NULL, LO_LABEL_LOCK},
 		{"switch-user-label", required_argument, NULL, LO_LABEL_SWITCH},
 		{"cancel-label", required_argument, NULL, LO_LABEL_CANCEL},
+		{"custom-label", required_argument, NULL, LO_LABEL_CUSTOM},
 		{"poweroff-symbol", required_argument, NULL, LO_SYMBOL_POWEROFF},
 		{"reboot-symbol", required_argument, NULL, LO_SYMBOL_REBOOT},
 		{"suspend-symbol", required_argument, NULL, LO_SYMBOL_SUSPEND},
@@ -946,6 +952,7 @@ static int parse_options(int argc, char **argv, struct waylogout_state *state,
 		{"lock-symbol", required_argument, NULL, LO_SYMBOL_LOCK},
 		{"switch-user-symbol", required_argument, NULL, LO_SYMBOL_SWITCH},
 		{"cancel-symbol", required_argument, NULL, LO_SYMBOL_CANCEL},
+		{"custom-symbol", required_argument, NULL, LO_SYMBOL_CUSTOM},
 		{"poweroff-shortcut", required_argument, NULL, LO_SHORTCUT_POWEROFF},
 		{"reboot-shortcut", required_argument, NULL, LO_SHORTCUT_REBOOT},
 		{"suspend-shortcut", required_argument, NULL, LO_SHORTCUT_SUSPEND},
@@ -955,6 +962,7 @@ static int parse_options(int argc, char **argv, struct waylogout_state *state,
 		{"lock-shortcut", required_argument, NULL, LO_SHORTCUT_LOCK},
 		{"switch-user-shortcut", required_argument, NULL, LO_SHORTCUT_SWITCH},
 		{"cancel-shortcut", required_argument, NULL, LO_SHORTCUT_CANCEL},
+		{"custom-shortcut", required_argument, NULL, LO_SHORTCUT_CUSTOM},
 		{"default-action", required_argument, NULL, LO_DEFAULT_ACTION},
 		{"hide-cancel", no_argument, NULL, LO_HIDE_CANCEL},
 		{"reverse-arrows", no_argument, NULL, LO_REVERSE_ARROWS},
@@ -1117,6 +1125,14 @@ static int parse_options(int argc, char **argv, struct waylogout_state *state,
 		    "Custom UTF-8 symbol character to display in the indicator for the \"cancel\" action. Default is .\n"
 		"  --cancel-shortcut <keycombo>         "
 		    "Keyboard shortcut key (with optional modifiers) to select the \"cancel\" action. Default is 'Escape'.\n"
+		"  --custom-command <command>           "
+		    "Command to run for a custom action. Can be specified multiple times.\n"
+		"  --custom-label <label>               "
+		    "Text label to display in the indicator for a custom action. Can be specified multiple times.\n"
+		"  --custom-symbol <symbol>             "
+		    "UTF-8 symbol character to display in the indicator for custom action. Can be specified multiple times.\n"
+		"  --custom-shortcut <keycombo>         "
+		    "Keyboard shortcut key (with optional modifiers) to select the \"switch user\" action. Default is 'u'.\n"
 		"  --default-action <action-name>       "
 		    "Action to pre-select on start.\n"
 		"  --hide-cancel                        "
@@ -1512,6 +1528,23 @@ static int parse_options(int argc, char **argv, struct waylogout_state *state,
 		case LO_SHORTCUT_SWITCH:
 			if (state)
 				add_action_shortcut(state, WL_ACTION_SWITCH, optarg);
+			break;
+		case LO_COMMAND_CUSTOM:
+			if (state)
+				add_action_command(state, WL_ACTION_CUSTOM, optarg);
+			break;
+		case LO_LABEL_CUSTOM:
+			waylogout_log(LOG_DEBUG, "... found custom label config line \"%s\"", optarg);
+			if (state)
+				add_action_label(state, WL_ACTION_CUSTOM, optarg);
+			break;
+		case LO_SYMBOL_CUSTOM:
+			if (state)
+				add_action_symbol(state, WL_ACTION_CUSTOM, optarg);
+			break;
+		case LO_SHORTCUT_CUSTOM:
+			if (state)
+				add_action_shortcut(state, WL_ACTION_CUSTOM, optarg);
 			break;
 		case LO_LABEL_CANCEL:
 			if (state)

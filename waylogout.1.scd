@@ -344,6 +344,23 @@ For special keys you must use their keysym names --- see _xkbcommon-keysyms.h_ a
 	Reverse the direction of the up/down arrows.
 
 
+# CUSTOM ACTIONS
+
+You can add your own custom actions using the options below. These options can be specified multiple times, but in that case should be grouped together, with each grouping containing at least a *custom-command*.
+
+*--custom-command* <command>
+	Command to run for the custom action.
+
+*--custom-label* <label>
+	Label to display for the custom action.
+
+*--custom-symbol* <character>
+	Symbol character to display for the custom action.
+
+*--custom-shortcut* <keycombo>
+	Keyboard shortcut key (with optional modifiers) to select the custom action.
+
+
 # AUTHORS
 
 Written by Jeremy Sylvestre, based on the codebase of Jakub Jirutka's fork of swaylock-effects by Martin Dørum, which is in turn forked from swaylock by Drew DeVault.
