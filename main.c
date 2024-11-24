@@ -19,7 +19,6 @@
 #include "action.h"
 #include "cairo.h"
 #include "helpers.h"
-#include "input.h"
 #include "log.h"
 #include "loop.h"
 #include "pool-buffer.h"
@@ -1760,6 +1759,7 @@ int main(int argc, char **argv) {
 				"no point running if user's only option is to do nothing.");
 		return EXIT_FAILURE;
 	}
+	waylogout_log(LOG_DEBUG, "Found %d configured actions", state.n_actions);
 	setup_rows(&state);
 	set_default_action(&state);
 

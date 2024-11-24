@@ -372,8 +372,6 @@ int finish_actions_setup(struct waylogout_state *state) {
 		);
 	}
 
-	waylogout_log(LOG_DEBUG, "Found %d configured actions", state->n_actions);
-
 	return 0;
 
 }
