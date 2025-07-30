@@ -1006,7 +1006,7 @@ static int parse_options(int argc, char **argv, struct waylogout_state *state,
 		"  --label-font-size <size>             "
 			"Sets a fixed font size for the action label text.\n"
 		"  --fa-font <font>                     "
-			"Sets the name of the Font Awesome font. Default is 'Font Awesome 6 Free'.\n"
+			"Sets the name of the Font Awesome font. Default is 'Font Awesome 7 Free'.\n"
 		"  --symbol-font-size <size>            "
 			"Sets a fixed font size for the action symbol.\n"
 		"  --indicator-radius <radius>          "
@@ -1688,7 +1688,7 @@ int main(int argc, char **argv) {
 	state.args = (struct waylogout_args){
 		.mode = BACKGROUND_MODE_FILL,
 		.font = strdup("sans-serif"),
-		.fa_font = strdup("Font Awesome 6 Free"),
+		.fa_font = strdup("Font Awesome 7 Free"),
 		.default_action = NULL,
 		.symbol_font_size = 0,
 		.label_font_size = 0,
