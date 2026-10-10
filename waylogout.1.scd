@@ -33,6 +33,9 @@ Provides you with graphical set of options to logout/suspend/poweroff/etc in you
 *-v, --version*
 	Show the version number and quit.
 
+*--output* <output>
+	Show the action buttons only on the specified output.
+
 *--scroll-sensitivity* <amount>
 	How fast selected action will change when scrolling with mouse/touch. Lower is faster; default is 8.
 

@@ -263,6 +263,9 @@ void render_frame(struct waylogout_action *action,
 void render_frames(struct waylogout_surface *surface) {
 	struct waylogout_state *state = surface->state;
 
+	if ((state->args.output != NULL) && (strcmp(state->args.output, surface->output_name) != 0))
+		return;
+
 	struct waylogout_frame_common fr_common;
 	fr_common.arc_radius = state->args.radius * surface->scale;
 	fr_common.arc_thickness = state->args.thickness * surface->scale;

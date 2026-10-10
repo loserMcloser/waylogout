@@ -36,6 +36,7 @@ struct waylogout_args {
 	char *font;
 	char *fa_font;
 	char *default_action;
+	char *output;
 	uint32_t symbol_font_size;
 	uint32_t label_font_size;
 	uint32_t radius;

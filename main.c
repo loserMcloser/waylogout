@@ -879,6 +879,7 @@ static int parse_options(int argc, char **argv, struct waylogout_state *state,
 		LO_SHORTCUT_CUSTOM,
 		LO_SCROLL_SENSITIVITY,
 		LO_INSTANT_RUN,
+		LO_OUTPUT,
 	};
 
 	static struct option long_options[] = {
@@ -967,6 +968,7 @@ static int parse_options(int argc, char **argv, struct waylogout_state *state,
 		{"reverse-arrows", no_argument, NULL, LO_REVERSE_ARROWS},
 		{"scroll-sensitivity", required_argument, NULL, LO_SCROLL_SENSITIVITY},
 		{"instant-run", no_argument, NULL, LO_INSTANT_RUN},
+		{"output", required_argument, NULL, LO_OUTPUT},
 		{0, 0, 0, 0}
 	};
 
@@ -997,6 +999,8 @@ static int parse_options(int argc, char **argv, struct waylogout_state *state,
 			"Same as --scaling=tile.\n"
 		"  -v, --version                        "
 			"Show the version number and quit.\n"
+		"  --output <output>                    "
+			"Show the action buttons only on the specified output.\n"
 		"  --fade-in <seconds>                  "
 			"Make the logout screen fade in instead of just popping in.\n"
 		"  --selection-label                    "
@@ -1573,6 +1577,10 @@ static int parse_options(int argc, char **argv, struct waylogout_state *state,
 			if (state)
 				state->args.instant_run = true;
 			break;
+		case LO_OUTPUT:
+			if (state)
+				state->args.output = strdup_noquotes(optarg);;
+			break;
 		default:
 			fprintf(stderr, "%s", usage);
 			return 1;
@@ -1690,6 +1698,7 @@ int main(int argc, char **argv) {
 		.font = strdup("sans-serif"),
 		.fa_font = strdup("Font Awesome 7 Free"),
 		.default_action = NULL,
+		.output = NULL,
 		.symbol_font_size = 0,
 		.label_font_size = 0,
 		.radius = 75,
